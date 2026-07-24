@@ -64,8 +64,7 @@ crewai-langfuse-tracing-demo/
 |   |-- quick-start.md                # Full beginner setup guide.
 |   |-- how-tracing-works.md          # How CrewAI, LiteLLM, and Langfuse connect.
 |   |-- how-adapters-work.md          # When and how to use each adapter.
-|   |-- what-you-see-in-langfuse.md   # What to expect after each run.
-|   `-- github-publishing-checklist.md# How to keep a public copy safe.
+|   `-- what-you-see-in-langfuse.md   # What to expect after each run.
 |
 `-- tests/
     `-- test_tools.py                 # Tests the fictional local tools.
@@ -145,4 +144,3 @@ For a deeper check, copy the trace ID from Langfuse and run:
 - [How tracing works](docs/how-tracing-works.md)
 - [How adapters work](docs/how-adapters-work.md)
 - [What to expect in Langfuse](docs/what-you-see-in-langfuse.md)
-- [How to publish a safe copy on GitHub](docs/github-publishing-checklist.md)
