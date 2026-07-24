@@ -15,7 +15,7 @@ retry example
   = normal trace plus one safe failure summary
 ```
 
-The code is in [failure.py](../src/crewai_langfuse_demo/adapters/failure.py). It exports only:
+Read the full [failure adapter reference](failure-adapter-reference.md). It links to both the reusable code and the smallest integration example. The adapter exports only:
 
 - tool name;
 - safe error category;
@@ -41,7 +41,7 @@ composite-tool example
   = parent tool plus safe child-operation observations
 ```
 
-The code is in [composite_tool.py](../src/crewai_langfuse_demo/adapters/composite_tool.py). It exports the parent-tool name, child-operation name, and safe final outcome only.
+Read the full [composite-tool adapter reference](composite-tool-adapter-reference.md). It links to both the reusable code and the smallest integration example. The adapter exports the parent-tool name, child-operation name, and safe final outcome only.
 
 Run it with:
 
@@ -56,4 +56,3 @@ The delegation example is deliberately automatic-only. Its trace should show the
 ```powershell
 .\scripts\run-delegation.ps1
 ```
-

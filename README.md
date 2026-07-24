@@ -27,6 +27,13 @@ Composite/nested tool
 
 The simple rule is: **start with automatic tracing**. Use an adapter only when the advanced example proves that automatic tracing cannot show an important part of the workflow clearly.
 
+## Adapter references
+
+| If you need to understand… | Open this explanation | Open this simple Python code |
+| --- | --- | --- |
+| A failed tool or retry outcome | [Failure adapter reference](docs/failure-adapter-reference.md) | [failure_adapter_example.py](examples/failure_adapter_example.py) |
+| Hidden child operations inside a parent tool | [Composite-tool adapter reference](docs/composite-tool-adapter-reference.md) | [composite_tool_adapter_example.py](examples/composite_tool_adapter_example.py) |
+
 ## Folder map
 
 This is the actual repository structure. The `src/crewai_langfuse_demo/` folder holds the code; the names below explain what each part is for.
@@ -38,6 +45,10 @@ crewai-langfuse-tracing-demo/
 |-- .env.example                      # Copy this to .env; never commit .env.
 |-- .gitignore                        # Keeps .env and local files out of Git.
 |-- requirements.txt                  # Python packages needed by the demo.
+|
+|-- examples/
+|   |-- failure_adapter_example.py    # Smallest failure-adapter integration.
+|   `-- composite_tool_adapter_example.py # Smallest composite-adapter integration.
 |
 |-- scripts/
 |   |-- setup.ps1                     # Installs the local Python environment.
@@ -70,7 +81,9 @@ crewai-langfuse-tracing-demo/
 |   |-- quick-start.md                # Full beginner setup guide.
 |   |-- how-tracing-works.md          # How CrewAI, LiteLLM, and Langfuse connect.
 |   |-- how-adapters-work.md          # When and how to use each adapter.
-|   `-- what-you-see-in-langfuse.md   # What to expect after each run.
+|   |-- what-you-see-in-langfuse.md   # What to expect after each run.
+|   |-- failure-adapter-reference.md  # Full failure-adapter explanation.
+|   `-- composite-tool-adapter-reference.md # Full composite-adapter explanation.
 |
 `-- tests/
     `-- test_tools.py                 # Tests the fictional local tools.
@@ -168,4 +181,6 @@ For a deeper check, copy the trace ID from Langfuse and run:
 - [How tracing works](docs/how-tracing-works.md)
 - [How adapters work](docs/how-adapters-work.md)
 - [What to expect in Langfuse](docs/what-you-see-in-langfuse.md)
+- [Failure adapter reference](docs/failure-adapter-reference.md)
+- [Composite-tool adapter reference](docs/composite-tool-adapter-reference.md)
 - [Optional local LiteLLM Proxy](litellm-proxy/README.md)
