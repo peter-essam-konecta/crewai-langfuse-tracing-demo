@@ -46,7 +46,13 @@ crewai-langfuse-tracing-demo/
 |   |-- run-delegation.ps1            # Runs automatic delegation tracing.
 |   |-- run-composite-tool.ps1        # Runs composite tool + composite adapter.
 |   |-- check-trace.ps1               # Checks a Langfuse trace by its ID.
-|   `-- open-langfuse.ps1             # Opens Langfuse in your default browser.
+|   |-- open-langfuse.ps1             # Opens Langfuse in your default browser.
+|   |-- start-litellm-proxy.ps1       # Starts the optional local LiteLLM Proxy.
+|   `-- test-litellm-proxy.ps1        # Sends a safe Proxy smoke test.
+|
+|-- litellm-proxy/
+|   |-- config.yaml                   # Safe local demo route: demo-groq.
+|   `-- README.md                     # Local Proxy setup, explained step by step.
 |
 |-- src/crewai_langfuse_demo/
 |   |-- tracing.py                    # Starts automatic OpenLIT tracing once.
@@ -86,13 +92,31 @@ Open `.env` and fill in the approved Langfuse and LiteLLM values supplied throug
 .\scripts\setup.ps1
 ```
 
-### 3. Run the basic crew
+### 3. Choose your LiteLLM Proxy
+
+**Option A — use an approved existing Proxy:** set `LITELLM_PROXY_HOST` and `LITELLM_MASTER_KEY` in `.env`, then continue to step 4.
+
+**Option B — start the optional local Proxy:** add `GROQ_API_KEY` to `.env`, then open a separate PowerShell window and run:
+
+```powershell
+.\scripts\start-litellm-proxy.ps1
+```
+
+Leave that window open. In a second window, verify the Proxy before running CrewAI:
+
+```powershell
+.\scripts\test-litellm-proxy.ps1
+```
+
+See [the local Proxy guide](litellm-proxy/README.md) for the full explanation.
+
+### 4. Run the basic crew
 
 ```powershell
 .\scripts\run-basic.ps1
 ```
 
-### 4. Open Langfuse
+### 5. Open Langfuse
 
 ```powershell
 .\scripts\open-langfuse.ps1
@@ -144,3 +168,4 @@ For a deeper check, copy the trace ID from Langfuse and run:
 - [How tracing works](docs/how-tracing-works.md)
 - [How adapters work](docs/how-adapters-work.md)
 - [What to expect in Langfuse](docs/what-you-see-in-langfuse.md)
+- [Optional local LiteLLM Proxy](litellm-proxy/README.md)

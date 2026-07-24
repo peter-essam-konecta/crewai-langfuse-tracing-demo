@@ -9,7 +9,10 @@ CrewAI example
 
 CrewAI model request
   -> LiteLLM Proxy
-  -> canonical model generation in Langfuse
+  -> model provider
+
+LiteLLM Proxy
+  -> canonical model generation, tokens, latency, and cost in Langfuse
 ```
 
 The starting code is [src/crewai_langfuse_demo/tracing.py](../src/crewai_langfuse_demo/tracing.py).
@@ -25,3 +28,4 @@ The tracing setup does four simple things:
 
 The result is one connected trace without adding manual spans to ordinary crews, agents, tasks, or tools.
 
+For a complete local learning setup, this repository includes an optional Proxy configuration and start script in [litellm-proxy/](../litellm-proxy/README.md). Developers who already have an approved development Proxy should use that instead.

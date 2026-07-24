@@ -1,0 +1,17 @@
+# This file defines one safe local demo route.
+# It contains no real credentials. LiteLLM reads GROQ_API_KEY and
+# LITELLM_MASTER_KEY from the ignored .env file.
+
+model_list:
+  - model_name: demo-groq
+    litellm_params:
+      model: groq/llama-3.3-70b-versatile
+      api_key: os.environ/GROQ_API_KEY
+
+litellm_settings:
+  callbacks: ["langfuse_otel"]
+  drop_params: true
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+

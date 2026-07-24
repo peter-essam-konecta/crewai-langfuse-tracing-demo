@@ -8,7 +8,7 @@ You need:
 
 - Python installed;
 - approved Langfuse keys;
-- access to an approved LiteLLM Proxy route; and
+- either access to an approved LiteLLM Proxy route **or** a Groq key for the optional local Proxy; and
 - PowerShell on Windows.
 
 ## Steps
@@ -27,19 +27,35 @@ You need:
    .\scripts\setup.ps1
    ```
 
-4. Run the simplest example:
+4. Choose one Proxy path:
+
+   - **Existing approved Proxy:** set its URL and key in `.env`, then continue to step 5.
+   - **Optional local Proxy:** add `GROQ_API_KEY` to `.env`, open a second PowerShell window, and run:
+
+     ```powershell
+     .\scripts\start-litellm-proxy.ps1
+     ```
+
+     Leave it running. In another window, confirm it works:
+
+     ```powershell
+     .\scripts\test-litellm-proxy.ps1
+     ```
+
+     Read [the local Proxy guide](../litellm-proxy/README.md) if you need more detail.
+
+5. Run the simplest CrewAI example:
 
    ```powershell
    .\scripts\run-basic.ps1
    ```
 
-5. Open Langfuse:
+6. Open Langfuse:
 
    ```powershell
    .\scripts\open-langfuse.ps1
    ```
 
-6. Open the newest trace for `crewai-langfuse-tracing-demo`. You should see the workflow, its agents and tasks, named tools, and model generations.
+7. Open the newest trace for `crewai-langfuse-tracing-demo`. You should see the workflow, its agents and tasks, named tools, and model generations.
 
 If you do not see a trace, first check that the LiteLLM Proxy and the Langfuse URL in `.env` are correct. Do not add another tracing library to “fix” it; that can create duplicate data.
-
