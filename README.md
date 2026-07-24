@@ -9,6 +9,68 @@ It contains two things:
 
 All customer-support data in this repository is fictional. Do not add real customer data, credentials, prompts, or tool payloads to the code or traces.
 
+## Understand this repository in 20 seconds
+
+```text
+Basic use case
+  -> uses automatic tracing only
+
+Retry failure
+  -> uses automatic tracing + failure adapter
+
+Delegation
+  -> uses automatic tracing only
+
+Composite/nested tool
+  -> uses automatic tracing + composite adapter
+```
+
+The simple rule is: **start with automatic tracing**. Use an adapter only when the advanced example proves that automatic tracing cannot show an important part of the workflow clearly.
+
+## Folder map
+
+This is the actual repository structure. The `src/crewai_langfuse_demo/` folder holds the code; the names below explain what each part is for.
+
+```text
+crewai-langfuse-tracing-demo/
+|
+|-- README.md                         # Start here.
+|-- .env.example                      # Copy this to .env; never commit .env.
+|-- .gitignore                        # Keeps .env and local files out of Git.
+|-- requirements.txt                  # Python packages needed by the demo.
+|
+|-- scripts/
+|   |-- setup.ps1                     # Installs the local Python environment.
+|   |-- run-basic.ps1                 # Runs the basic automatic-tracing crew.
+|   |-- run-retry.ps1                 # Runs retry + failure adapter.
+|   |-- run-delegation.ps1            # Runs automatic delegation tracing.
+|   |-- run-composite-tool.ps1        # Runs composite tool + composite adapter.
+|   |-- check-trace.ps1               # Checks a Langfuse trace by its ID.
+|   `-- open-langfuse.ps1             # Opens Langfuse in your default browser.
+|
+|-- src/crewai_langfuse_demo/
+|   |-- tracing.py                    # Starts automatic OpenLIT tracing once.
+|   |-- adapters/
+|   |   |-- failure.py                # Safe failure and retry summary adapter.
+|   |   `-- composite_tool.py         # Safe child-operation adapter.
+|   |-- basic/
+|   |   |-- crew.py                   # Basic CrewAI use case.
+|   |   `-- tools.py                  # Basic fictional local tools.
+|   `-- advanced/
+|       |-- crews.py                  # Retry, delegation, and composite crews.
+|       `-- tools.py                  # Advanced fictional local tools.
+|
+|-- docs/
+|   |-- quick-start.md                # Full beginner setup guide.
+|   |-- how-tracing-works.md          # How CrewAI, LiteLLM, and Langfuse connect.
+|   |-- how-adapters-work.md          # When and how to use each adapter.
+|   |-- what-you-see-in-langfuse.md   # What to expect after each run.
+|   `-- github-publishing-checklist.md# How to keep a public copy safe.
+|
+`-- tests/
+    `-- test_tools.py                 # Tests the fictional local tools.
+```
+
 ## Start here
 
 ### 1. Prepare your local settings
@@ -84,4 +146,3 @@ For a deeper check, copy the trace ID from Langfuse and run:
 - [How adapters work](docs/how-adapters-work.md)
 - [What to expect in Langfuse](docs/what-you-see-in-langfuse.md)
 - [How to publish a safe copy on GitHub](docs/github-publishing-checklist.md)
-
