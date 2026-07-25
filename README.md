@@ -54,6 +54,8 @@ crewai-langfuse-tracing-demo/
 |-- scripts/
 |   |-- setup.ps1                     # Installs the local Python environment.
 |   |-- setup-litellm-proxy.ps1       # Installs the separate local Proxy environment.
+|   |-- run-tests.ps1                 # Runs the safe local unit tests.
+|   |-- run-example.ps1               # Shared runner behind the scenario scripts.
 |   |-- run-basic.ps1                 # Runs the basic automatic-tracing crew.
 |   |-- run-retry.ps1                 # Runs retry + failure adapter.
 |   |-- run-delegation.ps1            # Runs automatic delegation tracing.
@@ -88,6 +90,8 @@ crewai-langfuse-tracing-demo/
 |   |-- how-tracing-works.md          # How CrewAI, LiteLLM, and Langfuse connect.
 |   |-- how-adapters-work.md          # When and how to use each adapter.
 |   |-- what-you-see-in-langfuse.md   # What to expect after each run.
+|   |-- scripts-reference.md          # Purpose, inputs, and output of every script.
+|   |-- troubleshooting.md            # Common setup and tracing problems.
 |   |-- failure-adapter-reference.md  # Full failure-adapter explanation.
 |   `-- composite-tool-adapter-reference.md # Full composite-adapter explanation.
 |
@@ -97,6 +101,17 @@ crewai-langfuse-tracing-demo/
 ```
 
 ## Start here
+
+Use Windows PowerShell and Python 3.10, 3.11, 3.12, or 3.13. Run every command
+from the cloned repository root. If you have not cloned the repository yet:
+
+```powershell
+git clone https://github.com/peter-essam-konecta/crewai-langfuse-tracing-demo.git
+Set-Location crewai-langfuse-tracing-demo
+python --version
+```
+
+For a completely guided setup, use the [Quick Start](docs/quick-start.md).
 
 ### 1. Prepare your local settings
 
@@ -110,6 +125,12 @@ Open `.env` and fill in the approved Langfuse and LiteLLM values supplied throug
 
 ```powershell
 .\scripts\setup.ps1
+```
+
+Confirm the local code is healthy before calling any external service:
+
+```powershell
+.\scripts\run-tests.ps1
 ```
 
 ### 3. Choose your LiteLLM Proxy
@@ -204,6 +225,8 @@ For a deeper check, copy the trace ID from Langfuse and run:
 - [How tracing works](docs/how-tracing-works.md)
 - [How adapters work](docs/how-adapters-work.md)
 - [What to expect in Langfuse](docs/what-you-see-in-langfuse.md)
+- [Every PowerShell script explained](docs/scripts-reference.md)
+- [Troubleshooting](docs/troubleshooting.md)
 - [Failure adapter reference](docs/failure-adapter-reference.md)
 - [Composite-tool adapter reference](docs/composite-tool-adapter-reference.md)
 - [Optional local LiteLLM Proxy](litellm-proxy/README.md)
