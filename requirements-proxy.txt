@@ -1,0 +1,7 @@
+# Kept separate from requirements.txt because LiteLLM Proxy's full package
+# bundle conflicts with CrewAI 1.15.2 in one Python environment. Installing
+# it here gives the Proxy its supported dependency set without affecting CrewAI.
+litellm[proxy]==1.91.2
+opentelemetry-sdk==1.44.0
+opentelemetry-exporter-otlp-proto-http==1.44.0
+opentelemetry-instrumentation-fastapi==0.65b0

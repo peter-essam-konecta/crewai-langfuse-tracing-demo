@@ -1,0 +1,16 @@
+# Separate local route for validating Langfuse Cloud V3 cost telemetry.
+# It uses the same safe demo model as config.yaml. The V3 cost hook is loaded
+# only by scripts\start-v3-cloud-proxy.ps1, leaving the normal Proxy unchanged.
+
+model_list:
+  - model_name: demo-groq
+    litellm_params:
+      model: groq/llama-3.3-70b-versatile
+      api_key: os.environ/GROQ_API_KEY
+
+litellm_settings:
+  callbacks: ["langfuse_otel"]
+  drop_params: true
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY

@@ -45,6 +45,7 @@ crewai-langfuse-tracing-demo/
 |-- .env.example                      # Copy this to .env; never commit .env.
 |-- .gitignore                        # Keeps .env and local files out of Git.
 |-- requirements.txt                  # Python packages needed by the demo.
+|-- requirements-proxy.txt            # Separate packages needed by local Proxy modes.
 |
 |-- examples/
 |   |-- failure_adapter_example.py    # Smallest failure-adapter integration.
@@ -52,6 +53,7 @@ crewai-langfuse-tracing-demo/
 |
 |-- scripts/
 |   |-- setup.ps1                     # Installs the local Python environment.
+|   |-- setup-litellm-proxy.ps1       # Installs the separate local Proxy environment.
 |   |-- run-basic.ps1                 # Runs the basic automatic-tracing crew.
 |   |-- run-retry.ps1                 # Runs retry + failure adapter.
 |   |-- run-delegation.ps1            # Runs automatic delegation tracing.
@@ -59,10 +61,14 @@ crewai-langfuse-tracing-demo/
 |   |-- check-trace.ps1               # Checks a Langfuse trace by its ID.
 |   |-- open-langfuse.ps1             # Opens Langfuse in your default browser.
 |   |-- start-litellm-proxy.ps1       # Starts the optional local LiteLLM Proxy.
+|   |-- start-v3-cloud-proxy.ps1      # Starts the optional V3 cost-validation Proxy.
+|   |-- inspect-v3-compliance.ps1     # Checks V3 cost fields in a Langfuse trace.
 |   `-- test-litellm-proxy.ps1        # Sends a safe Proxy smoke test.
 |
 |-- litellm-proxy/
 |   |-- config.yaml                   # Safe local demo route: demo-groq.
+|   |-- config.v3-cloud.yaml          # Separate Cloud V3 cost-validation route.
+|   |-- v3_cost_mapper.py             # Adds V3 cost to the canonical generation.
 |   `-- README.md                     # Local Proxy setup, explained step by step.
 |
 |-- src/crewai_langfuse_demo/
@@ -86,7 +92,8 @@ crewai-langfuse-tracing-demo/
 |   `-- composite-tool-adapter-reference.md # Full composite-adapter explanation.
 |
 `-- tests/
-    `-- test_tools.py                 # Tests the fictional local tools.
+    |-- test_tools.py                 # Tests the fictional local tools.
+    `-- test_litellm_v3_cost_mapper.py # Tests the optional V3 cost mapping.
 ```
 
 ## Start here
@@ -112,6 +119,7 @@ Open `.env` and fill in the approved Langfuse and LiteLLM values supplied throug
 **Option B — start the optional local Proxy:** add `GROQ_API_KEY` to `.env`, then open a separate PowerShell window and run:
 
 ```powershell
+.\scripts\setup-litellm-proxy.ps1
 .\scripts\start-litellm-proxy.ps1
 ```
 
@@ -122,6 +130,21 @@ Leave that window open. In a second window, verify the Proxy before running Crew
 ```
 
 See [the local Proxy guide](litellm-proxy/README.md) for the full explanation.
+
+**Option C — validate V3 cost with Langfuse Cloud:** this is an optional, separate local Proxy for checking the final cost field used by the V3 schema. Set `LITELLM_PROXY_HOST=http://127.0.0.1:4002` in your ignored `.env`, then run:
+
+```powershell
+.\scripts\setup-litellm-proxy.ps1
+.\scripts\start-v3-cloud-proxy.ps1
+```
+
+Run the basic crew, copy its trace ID from Langfuse Cloud, and check it with:
+
+```powershell
+.\scripts\inspect-v3-compliance.ps1 -TraceId <trace-id>
+```
+
+This option does not require Langfuse Docker. It sends telemetry directly to the Cloud URL in `LANGFUSE_BASE_URL`.
 
 ### 4. Run the basic crew
 

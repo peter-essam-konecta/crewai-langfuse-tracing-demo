@@ -33,6 +33,7 @@ You need:
    - **Optional local Proxy:** add `GROQ_API_KEY` to `.env`, open a second PowerShell window, and run:
 
      ```powershell
+     .\scripts\setup-litellm-proxy.ps1
      .\scripts\start-litellm-proxy.ps1
      ```
 
@@ -43,6 +44,19 @@ You need:
      ```
 
      Read [the local Proxy guide](../litellm-proxy/README.md) if you need more detail.
+
+   - **Optional Cloud V3 cost check:** set `LITELLM_PROXY_HOST=http://127.0.0.1:4002` in your ignored `.env`, then start this separate local Proxy:
+
+     ```powershell
+     .\scripts\setup-litellm-proxy.ps1
+     .\scripts\start-v3-cloud-proxy.ps1
+     ```
+
+     This uses the `LANGFUSE_BASE_URL` Cloud address from `.env`; no Langfuse Docker setup is needed. After the CrewAI run, validate the trace cost with:
+
+     ```powershell
+     .\scripts\inspect-v3-compliance.ps1 -TraceId <trace-id>
+     ```
 
 5. Run the simplest CrewAI example:
 

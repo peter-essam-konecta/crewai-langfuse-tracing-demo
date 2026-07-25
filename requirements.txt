@@ -1,4 +1,6 @@
 crewai==1.15.2
 openlit==1.44.0
-litellm[proxy]==1.91.2
+litellm==1.91.2
+opentelemetry-instrumentation-aiohttp-client==0.63b1
+opentelemetry-instrumentation-httpx==0.63b1
 python-dotenv==1.2.2
