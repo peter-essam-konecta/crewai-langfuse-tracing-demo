@@ -42,10 +42,10 @@ $auth = [Convert]::ToBase64String(
     [Text.Encoding]::UTF8.GetBytes("$env:LANGFUSE_PUBLIC_KEY`:$env:LANGFUSE_SECRET_KEY")
 )
 $headers = @{ Authorization = "Basic $auth" }
-$trace = Invoke-RestMethod -Headers $headers -Uri "$baseUrl/api/public/traces/$TraceId"
+$trace = Invoke-RestMethod -Headers $headers -Uri "$baseUrl/api/public/traces/$TraceId" -TimeoutSec 20
 $observations = @()
 foreach ($page in 1, 2) {
-    $response = Invoke-RestMethod -Headers $headers -Uri "$baseUrl/api/public/observations?traceId=$TraceId&limit=100&page=$page"
+    $response = Invoke-RestMethod -Headers $headers -Uri "$baseUrl/api/public/observations?traceId=$TraceId&limit=100&page=$page" -TimeoutSec 20
     $observations += @($response.data)
 }
 
