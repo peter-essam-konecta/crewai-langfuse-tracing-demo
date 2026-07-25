@@ -91,7 +91,7 @@ keys through the approved secret-management process.
 1. Wait a few seconds and refresh Langfuse; telemetry is sent in batches.
 2. Open the project that owns the keys in `.env`.
 3. Search for the service name in `OTEL_SERVICE_NAME`.
-4. Confirm the Proxy window is still running.
+4. If using a local Proxy, confirm its PowerShell window is still running.
 5. Run `test-litellm-proxy.ps1` to verify the model route.
 6. Check that `LANGFUSE_BASE_URL` does not point to the retired Docker setup.
 
@@ -100,10 +100,11 @@ create duplicate model records.
 
 ## The model generation appears in a separate trace
 
-Rerun both setup scripts so the documented HTTP and Proxy instrumentation is
-installed, then restart the Proxy and run a fresh CrewAI scenario. Use the
-repository start scripts; they load the settings needed to preserve the trace
-connection across the local process boundary.
+First rerun `setup.ps1` so the documented HTTP instrumentation is installed. If
+you use a local Proxy, also rerun `setup-litellm-proxy.ps1`, restart it with the
+repository start script, and run a fresh CrewAI scenario. If you use an approved
+shared Proxy, ask its owner to confirm that inbound OpenTelemetry trace context
+is enabled before running a fresh scenario.
 
 ## `v3CostReady` is `false`
 

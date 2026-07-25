@@ -44,7 +44,7 @@ are required. Keep all real values out of Git.
 | `LANGFUSE_SECRET_KEY` | Required | Required | Required |
 | `LITELLM_PROXY_HOST` | Approved Proxy URL | `http://127.0.0.1:4000` | `http://127.0.0.1:4002` |
 | `LITELLM_MASTER_KEY` | Required | Required | Required |
-| `GROQ_API_KEY` | Not used by this repository | Required | Required |
+| `GROQ_API_KEY` | Not required for this option | Required | Required |
 
 The safe `OTEL_SERVICE_NAME`, `DEMO_TENANT_ID`, and `DEMO_CONVERSATION_ID`
 defaults may remain unchanged for the teaching demo.
