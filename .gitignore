@@ -3,5 +3,3 @@
 .proxy-venv/
 __pycache__/
 *.py[cod]
-.pytest_cache/
-coverage.xml

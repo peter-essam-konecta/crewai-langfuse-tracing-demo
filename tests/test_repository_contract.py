@@ -17,6 +17,34 @@ CANONICAL_DOCS = (
 
 
 class RepositoryContractTests(unittest.TestCase):
+    def test_document_set_is_focused(self) -> None:
+        expected = {
+            "architecture-decisions-and-faq.md",
+            "developer-guide.md",
+            "implementation-handoff.md",
+            "trace-schema-contract.md",
+            "trace-verification-and-evidence.md",
+            "troubleshooting.md",
+        }
+        actual = {path.name for path in (REPOSITORY_ROOT / "docs").glob("*.md")}
+        self.assertEqual(actual, expected)
+
+    def test_retired_proxy_paths_stay_out_of_main(self) -> None:
+        retired_paths = (
+            "requirements-proxy.txt",
+            "litellm-proxy/config.yaml",
+            "litellm-proxy/config.v3-cloud.yaml",
+            "litellm-proxy/v3_cost_mapper.py",
+            "scripts/setup-litellm-proxy.ps1",
+            "scripts/start-litellm-proxy.ps1",
+            "scripts/start-v3-cloud-proxy.ps1",
+            "scripts/inspect-v3-compliance.ps1",
+            "scripts/test-litellm-proxy.ps1",
+            "tests/test_litellm_v3_cost_mapper.py",
+        )
+        present = [path for path in retired_paths if (REPOSITORY_ROOT / path).exists()]
+        self.assertEqual(present, [], "Retired paths restored to main: " + ", ".join(present))
+
     def test_relative_markdown_links_resolve(self) -> None:
         link_pattern = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
         missing: list[str] = []

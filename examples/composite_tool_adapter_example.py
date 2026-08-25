@@ -1,7 +1,7 @@
 """The smallest safe way to show hidden child operations inside one parent tool.
 
-Full explanation:
-https://github.com/peter-essam-konecta/crewai-langfuse-tracing-demo/blob/main/docs/composite-tool-adapter-reference.md
+Integration guide:
+https://github.com/peter-essam-konecta/crewai-langfuse-tracing-demo/blob/main/docs/developer-guide.md
 """
 
 from __future__ import annotations
@@ -42,4 +42,3 @@ def lookup_delay_policy(reason: str) -> str:
     """Replace this fictional child operation with your real internal function."""
 
     return f"Safe demo policy for {reason}."
-

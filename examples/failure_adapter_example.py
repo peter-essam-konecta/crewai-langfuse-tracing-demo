@@ -1,7 +1,7 @@
 """The smallest safe way to add the reusable failure adapter to one CrewAI run.
 
-Full explanation:
-https://github.com/peter-essam-konecta/crewai-langfuse-tracing-demo/blob/main/docs/failure-adapter-reference.md
+Integration guide:
+https://github.com/peter-essam-konecta/crewai-langfuse-tracing-demo/blob/main/docs/developer-guide.md
 """
 
 from __future__ import annotations
@@ -37,4 +37,3 @@ def run_crew_with_failure_summary(crew: Crew) -> Any:
 #
 # crew = build_your_crew()
 # result = run_crew_with_failure_summary(crew)
-
