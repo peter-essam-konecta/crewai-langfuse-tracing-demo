@@ -1,13 +1,10 @@
 # CrewAI + Langfuse Tracing Demo
 
-A small, safe teaching repository that shows how to trace a CrewAI workflow in Langfuse.
+A small, safe reference repository that shows how to trace a CrewAI workflow in Langfuse using LiteLLM Proxy and OpenLIT.
 
-It contains two things:
+> **AI Coding Agents & Developers:** If you are an AI assistant (Cursor, Claude Code, Antigravity, Copilot) or a developer integrating CrewAI tracing, start with [**`AGENTS.md`**](AGENTS.md). It is the canonical Single Source of Truth (SSOT) containing strict architectural invariants, reading order, and anti-patterns.
 
-1. A **basic crew** with automatic tracing only.
-2. **Advanced crews** that show when a small reusable adapter is useful.
-
-All customer-support data in this repository is fictional. Do not add real customer data, credentials, prompts, or tool payloads to the code or traces.
+---
 
 ## Understand this repository in 20 seconds
 
@@ -27,20 +24,27 @@ Composite/nested tool
 
 The simple rule is: **start with automatic tracing**. Use an adapter only when the advanced example proves that automatic tracing cannot show an important part of the workflow clearly.
 
-## Adapter references
+---
 
-| If you need to understand… | Open this explanation | Open this simple Python code |
-| --- | --- | --- |
-| A failed tool or retry outcome | [Failure adapter reference](docs/failure-adapter-reference.md) | [failure_adapter_example.py](examples/failure_adapter_example.py) |
-| Hidden child operations inside a parent tool | [Composite-tool adapter reference](docs/composite-tool-adapter-reference.md) | [composite_tool_adapter_example.py](examples/composite_tool_adapter_example.py) |
+## Documentation & Architecture Index
 
-## Folder map
+| Category | Document | Description |
+| :--- | :--- | :--- |
+| **AI Single Source of Truth** | [**`AGENTS.md`**](AGENTS.md) | Master AI guidelines, reading order, non-negotiable rules, and recipes. |
+| **Schema Contract** | [**Trace Schema Contract**](docs/trace-schema-contract.md) | Approved cross-channel trace schema (Issue #63 / Final Trace Schema). |
+| **Developer Guide** | [**Developer Integration Guide**](docs/developer-guide.md) | 6-step production integration recipe & 11-point acceptance checklist. |
+| **Architecture & FAQ** | [**Architecture Decisions & FAQ**](docs/architecture-decisions-and-faq.md) | OpenLIT vs OpenInference/OpenLLMetry comparison & Ticket #65 Q&A. |
+| **Governance & Handoff** | [**Implementation Handoff**](docs/implementation-handoff.md) | Role boundaries between Incubation R&D (Peter) and Dev Team (Marwan). |
+| **Live Trace Evidence** | [**Trace Verification & Evidence**](docs/trace-verification-and-evidence.md) | Live Langfuse Cloud trace links, trace IDs, and visual hierarchy trees. |
+| **Adapters Reference** | [Failure Adapter](docs/failure-adapter-reference.md) / [Composite Tool](docs/composite-tool-adapter-reference.md) | Deep dives into safe failure summaries and child operations. |
 
-This is the actual repository structure. The `src/crewai_langfuse_demo/` folder holds the code; the names below explain what each part is for.
+---
+
+## Folder Map
 
 ```text
 crewai-langfuse-tracing-demo/
-|
+|-- AGENTS.md                         # Master AI instructions & SSOT.
 |-- README.md                         # Start here.
 |-- .env.example                      # Copy this to .env; never commit .env.
 |-- .gitignore                        # Keeps .env and local files out of Git.
@@ -68,7 +72,7 @@ crewai-langfuse-tracing-demo/
 |   `-- test-litellm-proxy.ps1        # Sends a safe Proxy smoke test.
 |
 |-- litellm-proxy/
-|   |-- config.yaml                   # Safe local demo route: demo-groq.
+|   |-- config.yaml                   # Safe local demo route.
 |   |-- config.v3-cloud.yaml          # Separate Cloud V3 cost-validation route.
 |   |-- v3_cost_mapper.py             # Adds V3 cost to the canonical generation.
 |   `-- README.md                     # Local Proxy setup, explained step by step.
@@ -86,6 +90,11 @@ crewai-langfuse-tracing-demo/
 |       `-- tools.py                  # Advanced fictional local tools.
 |
 |-- docs/
+|   |-- trace-schema-contract.md      # Approved trace schema contract.
+|   |-- developer-guide.md            # Production developer guide & acceptance checklist.
+|   |-- architecture-decisions-and-faq.md # ADRs, benchmarks & Ticket #65 Q&A.
+|   |-- implementation-handoff.md     # Governance & ownership matrix.
+|   |-- trace-verification-and-evidence.md # Live trace links & visual trees.
 |   |-- quick-start.md                # Full beginner setup guide.
 |   |-- how-tracing-works.md          # How CrewAI, LiteLLM, and Langfuse connect.
 |   |-- how-adapters-work.md          # When and how to use each adapter.
@@ -100,10 +109,11 @@ crewai-langfuse-tracing-demo/
     `-- test_litellm_v3_cost_mapper.py # Tests the optional V3 cost mapping.
 ```
 
-## Start here
+---
 
-Use Windows PowerShell and Python 3.10, 3.11, 3.12, or 3.13. Run every command
-from the cloned repository root. If you have not cloned the repository yet:
+## Start Here
+
+Use Windows PowerShell and Python 3.10, 3.11, 3.12, or 3.13. Run every command from the cloned repository root:
 
 ```powershell
 git clone https://github.com/peter-essam-konecta/crewai-langfuse-tracing-demo.git
@@ -135,37 +145,9 @@ Confirm the local code is healthy before calling any external service:
 
 ### 3. Choose your LiteLLM Proxy
 
-**Option A — use an approved existing Proxy:** set `LITELLM_PROXY_HOST` and `LITELLM_MASTER_KEY` in `.env`, then continue to step 4.
-
-**Option B — start the optional local Proxy:** add `GROQ_API_KEY` to `.env`, then open a separate PowerShell window and run:
-
-```powershell
-.\scripts\setup-litellm-proxy.ps1
-.\scripts\start-litellm-proxy.ps1
-```
-
-Leave that window open. In a second window, verify the Proxy before running CrewAI:
-
-```powershell
-.\scripts\test-litellm-proxy.ps1
-```
-
-See [the local Proxy guide](litellm-proxy/README.md) for the full explanation.
-
-**Option C — validate V3 cost with Langfuse Cloud:** this is an optional, separate local Proxy for checking the final cost field used by the V3 schema. Set `LITELLM_PROXY_HOST=http://127.0.0.1:4002` in your ignored `.env`, then run:
-
-```powershell
-.\scripts\setup-litellm-proxy.ps1
-.\scripts\start-v3-cloud-proxy.ps1
-```
-
-Run the basic crew, copy its trace ID from Langfuse Cloud, and check it with:
-
-```powershell
-.\scripts\inspect-v3-compliance.ps1 -TraceId <trace-id>
-```
-
-This option does not require Langfuse Docker. It sends telemetry directly to the Cloud URL in `LANGFUSE_BASE_URL`.
+- **Option A — Use an approved existing Proxy:** set `LITELLM_PROXY_HOST` and `LITELLM_MASTER_KEY` in `.env`, then continue to step 4.
+- **Option B — Start the optional local Proxy:** add `GROQ_API_KEY` to `.env`, then run `.\scripts\start-litellm-proxy.ps1` in a separate window.
+- **Option C — Validate V3 cost with Langfuse Cloud:** see [litellm-proxy/README.md](litellm-proxy/README.md).
 
 ### 4. Run the basic crew
 
@@ -179,54 +161,23 @@ This option does not require Langfuse Docker. It sends telemetry directly to the
 .\scripts\open-langfuse.ps1
 ```
 
-Open the newest trace. A successful basic run should show one connected workflow with agents, tasks, named tools, and model generations.
+---
 
 ## Run the advanced examples
 
 | Goal | Command | Adapter used? |
-| --- | --- | --- |
+| :--- | :--- | :--- |
 | Show a normal crew | `.\scripts\run-basic.ps1` | No. Automatic tracing only. |
 | Show a retry and readable failure summary | `.\scripts\run-retry.ps1` | Yes. Failure adapter. |
 | Show agent delegation | `.\scripts\run-delegation.ps1` | No. Automatic tracing only. |
 | Show hidden child operations inside one parent tool | `.\scripts\run-composite-tool.ps1` | Yes. Composite-tool adapter. |
 
-## How the code is organised
-
-```text
-src/crewai_langfuse_demo/
-|-- tracing.py                 # Starts automatic OpenLIT tracing once.
-|-- adapters/
-|   |-- failure.py             # Adds a safe summary only when a tool fails.
-|   `-- composite_tool.py      # Adds safe child-operation observations when needed.
-|-- basic/                     # Simple three-agent support crew.
-`-- advanced/                  # Retry, delegation, and composite-tool crews.
-```
-
-The normal crew code does not create custom spans. The adapters are explicit exceptions for gaps demonstrated by the advanced examples. Read [how adapters work](docs/how-adapters-work.md) before changing them.
+---
 
 ## Quick “did it work?” check
 
-After a run finishes, open Langfuse and inspect the newest trace for this service. Check that it has:
-
-- one workflow trace;
-- the named agents and tasks for the selected example;
-- named tools; and
-- model generations from the LiteLLM route.
-
-For a deeper check, copy the trace ID from Langfuse and run:
+After a run finishes, open Langfuse and inspect the newest trace. For a deeper check, copy the trace ID from Langfuse and run:
 
 ```powershell
 .\scripts\check-trace.ps1 -TraceId <trace-id>
 ```
-
-## More help
-
-- [Quick start](docs/quick-start.md)
-- [How tracing works](docs/how-tracing-works.md)
-- [How adapters work](docs/how-adapters-work.md)
-- [What to expect in Langfuse](docs/what-you-see-in-langfuse.md)
-- [Every PowerShell script explained](docs/scripts-reference.md)
-- [Troubleshooting](docs/troubleshooting.md)
-- [Failure adapter reference](docs/failure-adapter-reference.md)
-- [Composite-tool adapter reference](docs/composite-tool-adapter-reference.md)
-- [Optional local LiteLLM Proxy](litellm-proxy/README.md)
