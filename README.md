@@ -2,7 +2,7 @@
 
 A small, safe reference repository that shows how to trace a CrewAI workflow in Langfuse using LiteLLM Proxy and OpenLIT.
 
-> **AI Coding Agents & Developers:** If you are an AI assistant (Cursor, Claude Code, Antigravity, Copilot) or a developer integrating CrewAI tracing, start with [**`AGENTS.md`**](AGENTS.md). It is the canonical Single Source of Truth (SSOT) containing strict architectural invariants, reading order, and anti-patterns.
+> **AI coding agents and developers:** Start with [**`AGENTS.md`**](AGENTS.md). It is the canonical Task 005 R&D and developer-handoff entry point. The repository is a tested reference, not a production deployment or a substitute for target-environment validation.
 
 ---
 
@@ -30,8 +30,8 @@ The simple rule is: **start with automatic tracing**. Use an adapter only when t
 
 | Category | Document | Description |
 | :--- | :--- | :--- |
-| **AI Single Source of Truth** | [**`AGENTS.md`**](AGENTS.md) | Master AI guidelines, reading order, non-negotiable rules, and recipes. |
-| **Schema Contract** | [**Trace Schema Contract**](docs/trace-schema-contract.md) | Approved cross-channel trace schema (Issue #63 / Final Trace Schema). |
+| **AI Entry Point** | [**`AGENTS.md`**](AGENTS.md) | Reading order, precedence rules, tested interfaces, and anti-patterns. |
+| **Schema Mapping** | [**Trace Schema Mapping**](docs/trace-schema-contract.md) | Repository-owned CrewAI subset and code mapping to the approved Final Trace Schema. |
 | **Developer Guide** | [**Developer Integration Guide**](docs/developer-guide.md) | 6-step production integration recipe & 11-point acceptance checklist. |
 | **Architecture & FAQ** | [**Architecture Decisions & FAQ**](docs/architecture-decisions-and-faq.md) | OpenLIT vs OpenInference/OpenLLMetry comparison & Ticket #65 Q&A. |
 | **Governance & Handoff** | [**Implementation Handoff**](docs/implementation-handoff.md) | Role boundaries between Incubation R&D (Peter) and Dev Team (Marwan). |
@@ -67,14 +67,14 @@ crewai-langfuse-tracing-demo/
 |   |-- check-trace.ps1               # Checks a Langfuse trace by its ID.
 |   |-- open-langfuse.ps1             # Opens Langfuse in your default browser.
 |   |-- start-litellm-proxy.ps1       # Starts the optional local LiteLLM Proxy.
-|   |-- start-v3-cloud-proxy.ps1      # Starts the optional V3 cost-validation Proxy.
-|   |-- inspect-v3-compliance.ps1     # Checks V3 cost fields in a Langfuse trace.
+|   |-- start-v3-cloud-proxy.ps1      # Starts the optional historical V3-era cost route.
+|   |-- inspect-v3-compliance.ps1     # Checks that retained V3-era cost route.
 |   `-- test-litellm-proxy.ps1        # Sends a safe Proxy smoke test.
 |
 |-- litellm-proxy/
 |   |-- config.yaml                   # Safe local demo route.
-|   |-- config.v3-cloud.yaml          # Separate Cloud V3 cost-validation route.
-|   |-- v3_cost_mapper.py             # Adds V3 cost to the canonical generation.
+|   |-- config.v3-cloud.yaml          # Retained historical V3-era cost route.
+|   |-- v3_cost_mapper.py             # Adds cost to that route's canonical generation.
 |   `-- README.md                     # Local Proxy setup, explained step by step.
 |
 |-- src/crewai_langfuse_demo/
@@ -90,7 +90,7 @@ crewai-langfuse-tracing-demo/
 |       `-- tools.py                  # Advanced fictional local tools.
 |
 |-- docs/
-|   |-- trace-schema-contract.md      # Approved trace schema contract.
+|   |-- trace-schema-contract.md      # CrewAI mapping to the approved final contract.
 |   |-- developer-guide.md            # Production developer guide & acceptance checklist.
 |   |-- architecture-decisions-and-faq.md # ADRs, benchmarks & Ticket #65 Q&A.
 |   |-- implementation-handoff.md     # Governance & ownership matrix.
@@ -106,7 +106,9 @@ crewai-langfuse-tracing-demo/
 |
 `-- tests/
     |-- test_tools.py                 # Tests the fictional local tools.
-    `-- test_litellm_v3_cost_mapper.py # Tests the optional V3 cost mapping.
+    |-- test_adapters.py              # Tests exact adapter spans and safe error mapping.
+    |-- test_repository_contract.py   # Prevents documentation/code drift.
+    `-- test_litellm_v3_cost_mapper.py # Tests the retained V3-era cost route.
 ```
 
 ---
@@ -147,7 +149,7 @@ Confirm the local code is healthy before calling any external service:
 
 - **Option A — Use an approved existing Proxy:** set `LITELLM_PROXY_HOST` and `LITELLM_MASTER_KEY` in `.env`, then continue to step 4.
 - **Option B — Start the optional local Proxy:** add `GROQ_API_KEY` to `.env`, then run `.\scripts\start-litellm-proxy.ps1` in a separate window.
-- **Option C — Validate V3 cost with Langfuse Cloud:** see [litellm-proxy/README.md](litellm-proxy/README.md).
+- **Option C — Reproduce the retained historical V3-era cost route:** see [litellm-proxy/README.md](litellm-proxy/README.md). The current implementation contract is the approved final schema mapping, not the historical V3 draft.
 
 ### 4. Run the basic crew
 

@@ -1,57 +1,52 @@
-# Architecture Decisions & Technical FAQ (Ticket #65)
+# Architecture Decisions and Technical FAQ
 
-> **Status:** Reference document detailing architectural decisions, tool evaluation benchmarks, and empirical answers to GitHub Issue #65 questions.
+> **Status:** Evidence-backed Task 005 R&D decisions for GitHub issue #65. Claims are scoped to the tested versions and POC environment.
 
----
+## ADR 1: Select OpenLIT as the automatic baseline
 
-## 1. Instrumentation Evaluation: Why OpenLIT?
+The POC compared three instrumentors on the same safe CrewAI workflow:
 
-During the Task 005 R&D investigation, three leading OpenTelemetry instrumentation frameworks were evaluated against the exact same CrewAI customer-support workflow, LiteLLM Proxy route, and Langfuse destination:
+| Tested library | CrewAI workflow visible | Connected to Proxy telemetry in one trace | Observed content behavior | Decision |
+| :--- | :---: | :---: | :--- | :--- |
+| OpenLIT `1.44.0` | Yes | Yes | Message-content capture could be disabled | Selected baseline |
+| OpenInference CrewAI `1.1.10` | Yes | No in the test | Truncated prompt content appeared by default | Rejected for this pattern |
+| OpenLLMetry CrewAI `0.62.1` | Yes | No in the test | Prompt/completion content appeared by default | Rejected for this pattern |
 
-| Instrumentation Library | CrewAI Workflow Visible | Connected to LiteLLM in 1 Trace | Message Privacy Control | Evaluation Outcome |
-| :--- | :---: | :---: | :---: | :--- |
-| **OpenLIT `1.44.0`** | **Yes** (Crew, Agent, Task, Tool) | **Yes** (Single Connected Trace) | **Yes** (`capture_message_content=False`) | **Selected Standard Baseline** |
-| **OpenInference CrewAI `1.1.10`** | Yes | **No** (Proxy calls split into separate traces) | Truncated prompts leaked by default | Rejected |
-| **OpenLLMetry CrewAI `0.62.1`** | Yes | **No** (Proxy calls split into separate traces) | Prompts and completions exposed | Rejected |
+OpenLIT was the only tested configuration that produced the required connected trace. This is an empirical POC result, not a universal claim about every version or configuration of those libraries.
 
-### Key Takeaway
-OpenLIT is the **only framework that maintains OpenTelemetry context propagation across the HTTP requests to the LiteLLM Proxy**, keeping CrewAI's task hierarchy and LiteLLM's model generation records in **one single trace**.
+## ADR 2: Keep model generation and cost ownership at LiteLLM Proxy
 
----
+The Proxy sees the provider response and is therefore the appropriate source for generation tokens, latency, and calculated cost. CrewAI/OpenLIT remains responsible for workflow telemetry. This separation avoids two competing generation records.
 
-## 2. Frequently Asked Questions (Ticket #65 Deep Dive)
+An isolated local ledger comparison matched Langfuse cost within floating-point rounding. The POC did not prove parity with enterprise invoices or every enterprise spend database; that remains a target-environment validation item.
 
-### Q1: Why does LiteLLM Proxy own the canonical model generation and cost records instead of CrewAI?
-**Answer:**
-1. **Financial Authority:** The enterprise LiteLLM Proxy connects directly to the model provider APIs, receives authoritative token usage from provider headers, and calculates exact USD costs based on enterprise model rate cards.
-2. **Unified Ledger:** The proxy logs spend records directly into the central spend database. Having LiteLLM emit the canonical generation span ensures trace costs match financial invoices with **zero drift** (measured local variance was `$0.000000000004` or `0.000000167%` due solely to float rounding).
-3. **Clean Separation of Concerns:** CrewAI focuses on agent orchestration logic; LiteLLM manages model routing, retries, rate limits, and billing.
+## ADR 3: Use explicit adapters only for measured gaps
 
-### Q2: Why is no adapter needed for CrewAI Agent Delegation?
-**Answer:**
-Automatic instrumentation by OpenLIT already captures agent-to-agent delegation cleanly:
-- When a manager agent delegates to a specialist, OpenLIT creates an `invoke_agent` child span representing the delegated specialist's execution.
-- The parent agent, specialist agent, and handoff execution are already readable in the trace hierarchy with 87.5% baseline coverage. Adding an application-level wrapper introduces redundant spans without adding diagnostic value.
+- Normal workflow, agent, task, parent-tool, and delegation telemetry remains automatic.
+- `FailureAdapter` summarizes safe failure metadata because the tested automatic export did not preserve the failed-tool identity, retry count, and final outcome clearly.
+- `CompositeToolAdapter` exposes selected internal operations because automatic tracing sees only the parent CrewAI tool.
 
-### Q3: Why is the Failure Adapter necessary for Retries?
-**Answer:**
-- When a tool fails and CrewAI retries, CrewAI catches the exception internally and invokes the tool again.
-- While CrewAI detects the failure, raw automatic OpenTelemetry exporters do not retain low-cardinality metadata describing which tool failed, the number of retries attempted, or the ultimate fallback resolution.
-- The `src/crewai_langfuse_demo/adapters/failure.py` adapter runs **only on failure/retry**, summarizing the retry cycle into a single safe `kolibri.crewai.failure_summary` span without logging sensitive stack traces.
+## FAQ
 
-### Q4: How does Composite Tool Observability work?
-**Answer:**
-- Standard CrewAI tools only emit a single `execute_tool` span for the parent function.
-- If a tool performs complex internal sub-tasks (e.g., query database -> call payment API -> update cache), standard tracing hides those sub-operations.
-- The `src/crewai_langfuse_demo/adapters/composite_tool.py` wrapper uses standard OpenTelemetry `start_as_current_span` with `gen_ai.operation.name = "execute_tool"` to expose these child operations as clean sub-spans in Langfuse.
+### Why is no delegation adapter used?
 
-### Q5: How is OpenTelemetry Context Propagated to LiteLLM Proxy?
-**Answer:**
-When CrewAI calls the LiteLLM Proxy via Python `requests` / `httpx`, OpenLIT automatically injects the active W3C `traceparent` header into the HTTP request headers. The LiteLLM Proxy extracts this `traceparent` header and attaches its generation span to the exact parent task span in Langfuse.
+The tested automatic trace made coordinator/specialist execution visible enough for the POC. Coverage was 87.5% because there was no separately named delegated policy task. Adding a wrapper would duplicate automatic observations without resolving that upstream naming limitation.
 
----
+### How does context reach LiteLLM Proxy?
 
-## 3. Known Limitations & Recommendations
+`configure_tracing()` explicitly instruments both HTTPX and aiohttp. Those OpenTelemetry client instrumentors inject the active W3C `traceparent` header into outgoing requests. The Proxy must be configured to extract that context. Verify that the generation joins the intended workflow hierarchy in development; the code alone cannot prove the remote Proxy configuration.
 
-1. **Named Delegated Policy Tasks:** While delegated agent execution is fully visible, CrewAI does not currently generate a distinct named task span for delegated policy evaluation. This is an upstream CrewAI design and does not impair diagnostic tracing.
-2. **Local vs Enterprise Proxy:** Local testing uses `litellm-proxy/config.yaml`. In production, the service points to Konecta's managed LiteLLM cluster (`https://api.dev.ix.konecta-digital.com/litellm-test`), which handles authentication and rate limiting centrally.
+### Does OpenLIT add no dependencies?
+
+No. In this repository, `openlit==1.44.0` is a direct dependency and it brings transitive OpenTelemetry packages. A target service must inspect its own dependency graph. If OpenLIT is not already present, adopting this exact pattern adds it.
+
+### Are the adapters production-ready?
+
+They are reusable, privacy-conscious, unit-tested R&D references. Production use requires a code review, dependency compatibility check, target-environment traces, privacy validation, and technical approval.
+
+### What remains open?
+
+- Development/staging implementation in the target CrewAI service
+- Enterprise secret and Proxy configuration
+- Fresh healthy, failure, cost, hierarchy, and privacy evidence
+- Production approval and GitHub issue closure by the responsible owners

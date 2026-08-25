@@ -15,10 +15,12 @@ LiteLLM Proxy
   -> canonical model generation, tokens, latency, and cost in Langfuse
 ```
 
-For the optional Cloud V3 cost-validation route, the Proxy adds
+For the optional historical V3-era cost-validation route, the Proxy adds
 `gen_ai.usage.cost` to that same canonical model generation. It does not create
 a second generation or a second cost. This route sends directly to Langfuse
-Cloud through `LANGFUSE_BASE_URL`; it does not use Langfuse Docker.
+Cloud through `LANGFUSE_BASE_URL`; it does not use Langfuse Docker. The route
+is retained for reproducibility; the current contract is the approved final
+schema mapping in `trace-schema-contract.md`.
 
 The starting code is [src/crewai_langfuse_demo/tracing.py](../src/crewai_langfuse_demo/tracing.py).
 

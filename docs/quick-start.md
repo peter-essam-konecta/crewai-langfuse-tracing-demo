@@ -44,6 +44,7 @@ are required. Keep all real values out of Git.
 | `LANGFUSE_SECRET_KEY` | Required | Required | Required |
 | `LITELLM_PROXY_HOST` | Approved Proxy URL | `http://127.0.0.1:4000` | `http://127.0.0.1:4002` |
 | `LITELLM_MASTER_KEY` | Required | Required | Required |
+| `LITELLM_MODEL` | Approved Proxy model alias | `demo-groq` | `demo-groq` |
 | `GROQ_API_KEY` | Not required for this option | Required | Required |
 
 The safe `OTEL_SERVICE_NAME`, `DEMO_TENANT_ID`, and `DEMO_CONVERSATION_ID`
@@ -91,7 +92,7 @@ defaults may remain unchanged for the teaching demo.
 
      Read [the local Proxy guide](../litellm-proxy/README.md) if you need more detail.
 
-   - **Optional Cloud V3 cost check:** set `LITELLM_PROXY_HOST=http://127.0.0.1:4002` in your ignored `.env`, then start this separate local Proxy:
+   - **Optional historical V3-era cost check:** this route is retained to reproduce earlier cost evidence; it is not the current schema authority. Set `LITELLM_PROXY_HOST=http://127.0.0.1:4002` and `LITELLM_MODEL=demo-groq` in your ignored `.env`, then start this separate local Proxy:
 
      ```powershell
      .\scripts\setup-litellm-proxy.ps1

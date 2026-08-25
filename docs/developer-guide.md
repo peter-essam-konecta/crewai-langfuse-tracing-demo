@@ -1,151 +1,115 @@
-# CrewAI Traceability Pattern: Developer Integration Guide
+# CrewAI Tracing Developer Integration Guide
 
-> **Status:** Reference integration guide and acceptance checklist for developers and AI coding agents instrumenting CrewAI services for Langfuse.
+> **Status:** R&D-validated reference pattern. Development/staging validation and production approval remain the development team's responsibility.
 
----
+## Purpose
 
-## 1. Purpose
+This guide explains how to adapt the repository's automatic-first CrewAI tracing pattern. The target outcome is one connected Langfuse trace containing automatic CrewAI workflow telemetry and LiteLLM Proxy-owned model generations, without raw message content.
 
-This guide outlines the standard recipe to instrument any CrewAI service at Konecta with LiteLLM Proxy and Langfuse, using the **Automatic-First** pattern.
+The POC demonstrates that outcome. It does not guarantee it in a different service, dependency set, Proxy, or exporter; validate every acceptance item after integration.
 
-By following this guide, you ensure:
-- Complete visibility of crews, agents, tasks, tools, and model calls in **one connected Langfuse trace**.
-- Accurate financial cost calculation matching LiteLLM Proxy ledgers.
-- Full compliance with the approved **Final Trace Schema**.
-- Strict privacy protection with zero prompt or PII leakage.
-
----
-
-## 2. Architecture & Data Flow
+## Data flow
 
 ```text
-CrewAI Application Process
-  │  (Automatic agent, task, and tool execution spans)
-  ▼
-OpenLIT (with schema & privacy filters)
-  │  (Propagates OpenTelemetry traceparent context via HTTP headers)
-  ▼
-Langfuse Cloud / Self-Hosted ◄────────── LiteLLM Enterprise Proxy
-                                            │
-                                            │ (Canonical LLM generation spans,
-                                            │  token counts, latency, and USD cost)
-                                            ▼
-                                     Model Provider (e.g. Gemini / Groq / OpenAI)
+CrewAI application
+  -> OpenLIT automatic workflow/agent/task/tool telemetry
+  -> OTLP export to Langfuse
+
+CrewAI model request
+  -> instrumented HTTPX/aiohttp request with W3C trace context
+  -> LiteLLM Proxy
+  -> canonical model generation, tokens, latency, and cost in Langfuse
 ```
 
----
+## Six-step integration recipe
 
-## 3. Step-by-Step Integration Recipe (6 Steps)
+### 1. Review dependencies before adding them
 
-### Step 1: Add Dependencies
-Ensure your project's `requirements.txt` or `pyproject.toml` includes:
+The validated repository pins are:
+
 ```text
-crewai>=0.100.0
-openlit>=1.35.0
-opentelemetry-api>=1.20.0
-opentelemetry-sdk>=1.20.0
-opentelemetry-exporter-otlp>=1.20.0
+crewai==1.15.2
+openlit==1.44.0
+litellm==1.91.2
+opentelemetry-instrumentation-aiohttp-client==0.63b1
+opentelemetry-instrumentation-httpx==0.63b1
+python-dotenv==1.2.2
 ```
 
-### Step 2: Configure Environment Variables
-Set the following environment variables through your service's secure configuration manager (never commit `.env`):
-```bash
-# Langfuse OTLP Tracing
-LANGFUSE_BASE_URL="https://cloud.langfuse.com"
-LANGFUSE_PUBLIC_KEY="pk-lf-..."
-LANGFUSE_SECRET_KEY="sk-lf-..."
+These are the direct dependencies in `requirements.txt`; OpenLIT and CrewAI bring additional transitive OpenTelemetry packages. Do not copy loose version ranges into a target service. First compare its existing dependency graph, then add or align only the packages the reviewed implementation needs.
 
-# LiteLLM Proxy
-LITELLM_PROXY_HOST="https://api.dev.ix.konecta-digital.com/litellm-test"
-LITELLM_MASTER_KEY="sk-..."
-LITELLM_MODEL="openai/gemini-2.5-flash-nothink"
+Important: OpenLIT is already a dependency of this reference repository. Adding this pattern to another repository introduces a new direct dependency there unless that repository already includes OpenLIT.
 
-# Platform Metadata
-OTEL_SERVICE_NAME="customer-support-crewai"
-DEPLOYMENT_ENVIRONMENT="development"
-KOLIBRI_TENANT_ID="konecta-customer-service"
-KOLIBRI_CHANNEL="chat"
+### 2. Configure environment values securely
+
+The current `Settings` implementation reads:
+
+```text
+LANGFUSE_BASE_URL
+LANGFUSE_PUBLIC_KEY
+LANGFUSE_SECRET_KEY
+LITELLM_PROXY_HOST
+LITELLM_MASTER_KEY
+LITELLM_MODEL
+OTEL_SERVICE_NAME
+DEMO_TENANT_ID
+DEMO_CONVERSATION_ID
+DEMO_AGENT_ID
+DEMO_CHANNEL
 ```
 
-### Step 3: Initialize OpenLIT Tracing at Startup
-Create or import `init_tracing()` and invoke it at the **very top of your application entrypoint before importing CrewAI**:
+Use the target service's secret manager for keys. The `DEMO_*` names are teaching-repository names; map them deliberately to approved service configuration rather than silently inventing replacements.
+
+### 3. Configure tracing before importing CrewAI workflows
+
+Use the maintained implementation instead of recreating OpenLIT setup from prose:
 
 ```python
-import os
-import openlit
-from opentelemetry import trace
+from crewai_langfuse_demo.config import load_settings
+from crewai_langfuse_demo.tracing import configure_tracing, flush_tracing
 
-def init_tracing():
-    """Initializes OpenLIT with Langfuse exporter and privacy controls."""
-    langfuse_url = os.getenv("LANGFUSE_BASE_URL", "https://cloud.langfuse.com")
-    public_key = os.getenv("LANGFUSE_PUBLIC_KEY")
-    secret_key = os.getenv("LANGFUSE_SECRET_KEY")
-    
-    # Configure OpenLIT once
-    openlit.init(
-        environment=os.getenv("DEPLOYMENT_ENVIRONMENT", "development"),
-        application_name=os.getenv("OTEL_SERVICE_NAME", "crewai-service"),
-        otlp_endpoint=f"{langfuse_url}/api/public/otel/v1/traces",
-        otlp_headers={"Authorization": f"Basic {public_key}:{secret_key}"},
-        capture_message_content=False,   # Strictly disable message text capture
-        disable_batch=False
-    )
+settings = load_settings()
+configure_tracing(settings)
+
+# Import modules that import CrewAI only after tracing is configured.
+from crewai_langfuse_demo.basic.crew import build_crew
+
+try:
+    result = build_crew(settings).kickoff()
+finally:
+    flush_tracing()
 ```
 
-### Step 4: Configure CrewAI LLM Client to Route Through LiteLLM Proxy
-In your crew configuration or agent setup, use CrewAI's `LLM` class pointing to the proxy:
+The exact implementation is in `src/crewai_langfuse_demo/tracing.py`. It correctly builds the Langfuse Basic authorization header, uses the OTLP base endpoint, disables duplicate client instrumentors, disables message content, and instruments HTTPX/aiohttp for context propagation.
 
-```python
-import os
-from crewai import LLM
+### 4. Route CrewAI model calls through LiteLLM Proxy
 
-def get_llm():
-    return LLM(
-        model=os.getenv("LITELLM_MODEL", "openai/gemini-2.5-flash-nothink"),
-        base_url=f"{os.getenv('LITELLM_PROXY_HOST')}/v1",
-        api_key=os.getenv("LITELLM_MASTER_KEY")
-    )
-```
+Use `src/crewai_langfuse_demo/llm.py` as the maintained reference. The Proxy host, key, and model come from `Settings`. Do not hardcode credentials.
 
-### Step 5: (Optional) Attach Failure Adapter for Retries
-If your crew uses tools that may fail and retry:
-```python
-from crewai_langfuse_demo.adapters.failure import observe_crew_failures
+### 5. Add the failure adapter only when needed
 
-with observe_crew_failures(crew, workflow_name="Customer Order Resolution"):
-    result = crew.kickoff(inputs={"order_id": "ORD-123"})
-```
+Use `FailureAdapter` for retry/fallback workflows that need a safe summary not retained by automatic telemetry. Follow `examples/failure_adapter_example.py` exactly. The public interface is:
 
-### Step 6: (Optional) Wrap Child Operations in Composite Tools
-If a tool executes multiple distinct backend sub-operations:
-```python
-from crewai_langfuse_demo.adapters.composite_tool import observe_child_operation
+- `FailureAdapter.install()`
+- `FailureAdapter.complete(crew_completed=...)`
+- `FailureAdapter.uninstall()`
 
-@tool("sync_account")
-def sync_account(account_id: str):
-    with observe_child_operation("sync_account", "validate_billing", system="billing_db"):
-        # sub-operation 1
-        pass
-        
-    with observe_child_operation("sync_account", "update_crm", system="crm_service"):
-        # sub-operation 2
-        pass
-```
+### 6. Add the composite adapter only when needed
 
----
+Use `CompositeToolAdapter.run_child(...)` for selected internal operations hidden inside a parent tool. Follow `examples/composite_tool_adapter_example.py` exactly. Do not wrap the parent tool because CrewAI already traces it.
 
-## 4. Development Acceptance Checklist (11 Points)
+## Development acceptance checklist
 
-Before marking a CrewAI service as production-ready, verify that its traces satisfy all 11 criteria:
+- [ ] One crew run, its automatic CrewAI observations, and its Proxy generations share one trace ID.
+- [ ] The observed hierarchy is readable and no manual normal-operation spans duplicate automatic spans.
+- [ ] Model calls appear as canonical Langfuse generations.
+- [ ] Generation token and cost fields match the approved Proxy evidence source within documented rounding tolerance.
+- [ ] HTTP transport observations are not counted as additional model generations.
+- [ ] Automatic spans contain `kolibri.tenant.id`, `gen_ai.conversation.id`, `gen_ai.agent.id`, `kolibri.runtime.name = "crewai"`, and `kolibri.channel`.
+- [ ] A fresh trace inspection confirms that prompts, completions, tool payloads, customer identifiers, raw errors, and stack traces are absent.
+- [ ] Failed operations use low-cardinality `error.type` and OTel `ERROR` status.
+- [ ] When enabled, the failure summary contains the exact `kolibri.failure.*` fields documented in the schema mapping.
+- [ ] When enabled, composite child spans contain the exact `kolibri.composite.*` fields documented in the schema mapping.
+- [ ] `.\scripts\run-tests.ps1` passes and a live healthy/failure run passes in the target environment.
 
-- [ ] **1. Single Connected Trace:** The entire crew run (crew, agents, tasks, tools, and LiteLLM model calls) appears in exactly one Langfuse trace.
-- [ ] **2. Correct Hierarchy:** Spans nest cleanly: `Workflow -> Agent Step -> Task -> Tool -> Model Generation`.
-- [ ] **3. Canonical LLM Generation:** Model calls appear as canonical Langfuse Generation objects, not generic spans.
-- [ ] **4. Accurate Cost & Tokens:** `gen_ai.usage.cost` (or `litellm.cost.total`), `prompt_tokens`, and `completion_tokens` match the LiteLLM Proxy response.
-- [ ] **5. No Transport Duplication:** LiteLLM HTTP transport records (`POST /chat/completions`) are not counted as extra model calls.
-- [ ] **6. Mandatory Metadata:** Root span includes `kolibri.tenant.id`, `gen_ai.conversation.id`, `gen_ai.agent.id`, `kolibri.runtime.name = "crewai"`, and `kolibri.channel`.
-- [ ] **7. Content Privacy:** `capture_message_content` is `False`. No prompts, completions, customer names, or PII appear in span attributes.
-- [ ] **8. Safe Error Handling:** Failed tool executions log low-cardinality `error.type` and standard OTel status `ERROR` without raw stack traces.
-- [ ] **9. Failure Summary on Retry:** When a retry occurs, `kolibri.crewai.failure_summary` records failed tool, retry count, and outcome.
-- [ ] **10. Composite Tool Observability:** Internal child operations inside complex tools appear as standard `execute_tool` spans with `kolibri.composite.*` markers.
-- [ ] **11. Unit & Regression Tests:** All project unit tests pass cleanly with zero regression.
+`scripts/check-trace.ps1` prints a structural summary only. It does not independently prove privacy or cost parity; those require trace inspection and comparison with the approved Proxy record.

@@ -1,212 +1,129 @@
-# AI Agent Instructions & Single Source of Truth
+# AI Agent Instructions and Repository Source of Truth
 
-Welcome to the **CrewAI + Langfuse Observability Reference Repository**.
+This repository is the canonical Task 005 R&D and developer-handoff reference for CrewAI tracing with OpenLIT, LiteLLM Proxy, OpenTelemetry, and Langfuse. It is a tested teaching implementation, not a production deployment or a substitute for development-environment validation.
 
-This repository is the canonical Single Source of Truth (SSOT) for instrumenting CrewAI multi-agent systems with LiteLLM Proxy and Langfuse at Konecta. Whether you are an AI coding assistant (Cursor, Claude Code, Antigravity, GitHub Copilot, Windsurf) or a human engineer, follow this document to navigate, understand, and modify the codebase without making unverified assumptions.
+Do not fill missing facts with assumptions. If the code, tests, or verified evidence do not establish a claim, label it as unknown or pending validation.
 
----
+## 1. Required reading order
 
-## 1. Required Reading Order
+Read these files before proposing or changing an integration:
 
-Before proposing, generating, or modifying any code or configuration, read the documentation in this strict order:
+1. `AGENTS.md`
+2. `docs/trace-schema-contract.md`
+3. `docs/developer-guide.md`
+4. `docs/architecture-decisions-and-faq.md`
+5. `docs/implementation-handoff.md`
+6. `docs/trace-verification-and-evidence.md`
+7. `README.md`
 
-1. **`AGENTS.md` (This File):** Ground rules, architectural invariants, and anti-patterns.
-2. **`docs/trace-schema-contract.md`:** The approved cross-channel trace schema (Issue #63 / Final Trace Schema).
-3. **`docs/developer-guide.md`:** The production integration guide and 11-point development acceptance checklist.
-4. **`docs/architecture-decisions-and-faq.md`:** Architectural Decision Records (ADRs), tool comparison benchmarks, and answers to Ticket #65 questions.
-5. **`docs/implementation-handoff.md`:** Role boundaries between Incubation R&D (Peter) and Development Implementation (Marwan).
-6. **`docs/trace-verification-and-evidence.md`:** Live Langfuse Cloud trace IDs, expected observation counts, and span hierarchy trees.
-7. **`README.md`:** Quickstart and PowerShell script navigation.
+Use this precedence when sources disagree:
 
----
+1. The approved Final Trace Schema rules summarized in `docs/trace-schema-contract.md` govern field names and privacy.
+2. Source code and passing tests govern the interfaces and current behavior in this repository.
+3. `docs/trace-verification-and-evidence.md` governs which live outcomes have recorded evidence.
+4. Guides and FAQs explain those sources; they do not override them.
 
-## 2. Core Architectural Invariants (Non-Negotiable)
+Stop and report any unresolved contradiction before implementing it.
 
-Any AI agent generating code in this repository or adapting this pattern for other services **MUST** adhere strictly to the following rules:
+## 2. Architectural invariants
 
-### A. The "Automatic-First" Principle
-- **Do NOT invent manual spans** around standard CrewAI workflows, agents, tasks, or normal tools.
-- OpenLIT instruments CrewAI framework operations automatically. Adding manual application spans leads to duplicated, conflicting observations in Langfuse.
-- Only two explicit, narrowly-scoped adapters are permitted:
-  1. **Failure Adapter (`src/crewai_langfuse_demo/adapters/failure.py`):** Adds a single `kolibri.crewai.failure_summary` span **only** when a tool execution fails and triggers retries or fallbacks.
-  2. **Composite Tool Adapter (`src/crewai_langfuse_demo/adapters/composite_tool.py`):** Wraps internal child operations hidden inside a complex parent tool using standard `execute_tool` child spans.
-- **Delegation requires NO custom adapter:** Standard agent-to-agent delegation is captured automatically by OpenLIT.
+### Automatic first
 
-### B. Single Responsibility for Model Generation & Cost
-- **CrewAI / OpenLIT owns workflow telemetry:** Crews, agents, tasks, and tool execution spans.
-- **LiteLLM Proxy owns canonical LLM generations:** Token counts, prompt/completion token usage, latency, and financial cost (`gen_ai.usage.cost` / `litellm.cost.total`).
-- **Never double-count:** HTTP transport records (e.g., `POST /chat/completions`) and model generation spans in the same trace belong to the same request. Telemetry dashboards count the canonical generation span.
-- **Context Propagation:** The application runtime must propagate the OpenTelemetry `traceparent` context header across HTTP requests to the LiteLLM Proxy so that LLM calls appear inside the exact parent task span.
+- Do not create manual spans around normal CrewAI workflows, agents, tasks, or tools. OpenLIT supplies that framework telemetry.
+- Use `FailureAdapter` only when a run needs a safe summary of tool failure, retry count, and final outcome.
+- Use `CompositeToolAdapter` only for selected internal operations that automatic tracing cannot see inside a parent tool.
+- Standard delegation uses automatic tracing and no custom adapter.
 
-### C. Strict Schema Adherence
-- All trace attributes must comply with the approved **Final Trace Schema (`docs/trace-schema-contract.md`)**.
-- **Mandatory Root Attributes:**
-  - `kolibri.tenant.id` (e.g., `"konecta-customer-service"`)
-  - `gen_ai.conversation.id` (Session identifier)
-  - `gen_ai.agent.id` (e.g., `"order-support-crew"`)
-  - `kolibri.runtime.name` (Value: `"crewai"`)
-  - `kolibri.channel` (Value: `"chat"`, `"voice"`, or `"messaging"`)
-- **Prohibited:** Never invent custom keys inside the official `gen_ai.*` namespace. Use `kolibri.*` for custom enterprise extensions.
+### One owner for each telemetry layer
 
-### D. Zero-PII and Content Privacy
-- **Prompts, raw completions, tool arguments, tool outputs, and raw stack traces must NEVER be captured** in telemetry or stored in source files.
-- OpenLIT privacy controls (`capture_message_content=False`) are enabled by default in `src/crewai_langfuse_demo/tracing.py`.
-- Low-cardinality error identifiers (e.g., `error.type = "controlled_test_failure"`) are recorded instead of raw customer exception strings.
+- CrewAI/OpenLIT owns workflow, agent, task, and tool telemetry.
+- LiteLLM Proxy owns canonical model generations, tokens, latency, and cost.
+- HTTP transport observations and model generations describe the same request; dashboards must count only canonical generations.
+- The application explicitly instruments HTTPX and aiohttp so the active W3C trace context reaches the Proxy. Verify the resulting hierarchy in the target environment; do not assume it.
 
-### E. Single Instrumentation Exporter Rule
-- Use **OpenLIT** as the sole automatic instrumentation library.
-- **Never enable OpenInference, OpenLLMetry, or CrewAI's proprietary hosted tracing** in the same process as OpenLIT, as this causes duplicate and fragmented traces.
+### Schema and privacy
 
----
+- Never invent attributes in the reserved `gen_ai.*` namespace. Use approved `kolibri.*` extensions for repository-specific fields.
+- Preserve `kolibri.tenant.id`, `gen_ai.conversation.id`, `gen_ai.agent.id`, `kolibri.runtime.name`, and `kolibri.channel` on automatic spans.
+- Never capture prompts, completions, tool arguments, tool outputs, customer identifiers, raw exception messages, or stack traces.
+- `capture_message_content=False` and `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=no_content` reduce content capture. They do not prove that every exporter is safe; inspect a fresh trace before approval.
 
-## 3. Codebase Layout & Key Files
+### One automatic instrumentation library
+
+- OpenLIT is the selected and tested automatic instrumentation library for this POC.
+- Do not enable OpenInference, OpenLLMetry, or CrewAI hosted tracing in the same process because the tested alternatives created duplicate or fragmented telemetry.
+
+## 3. Current implementation map
 
 ```text
-crewai-langfuse-tracing-demo/
-|-- AGENTS.md                                # Master AI instructions & SSOT (This file)
-|-- README.md                                # Developer onboarding & navigation
-|-- requirements.txt                         # Application Python dependencies
-|-- requirements-proxy.txt                   # Local proxy dependencies (optional)
-|
-|-- src/crewai_langfuse_demo/
-|   |-- __init__.py
-|   |-- config.py                            # Safe environment settings & defaults
-|   |-- llm.py                               # LiteLLM Proxy LLM client factory
-|   |-- main.py                              # Entry point for running scenarios
-|   |-- tracing.py                           # OpenLIT initialization & trace bootstrap
-|   |
-|   |-- adapters/
-|   |   |-- __init__.py
-|   |   |-- failure.py                       # Error-only failure summary adapter
-|   |   `-- composite_tool.py                # Safe child-operation adapter
-|   |
-|   |-- basic/
-|   |   |-- __init__.py
-|   |   |-- crew.py                          # 3-agent baseline order support crew
-|   |   `-- tools.py                         # Baseline fictional customer support tools
-|   |
-|   `-- advanced/
-|       |-- __init__.py
-|       |-- crews.py                         # Retry, Delegation, and Composite crews
-|       `-- tools.py                         # Advanced tools (retry-trigger, composite)
-|
-|-- docs/
-|   |-- trace-schema-contract.md             # Authoritative schema specification
-|   |-- developer-guide.md                   # 6-step integration guide & checklist
-|   |-- architecture-decisions-and-faq.md    # ADRs, tool comparison & Ticket #65 Q&A
-|   |-- implementation-handoff.md            # Role boundaries (Incubation vs Dev)
-|   |-- trace-verification-and-evidence.md   # Live Langfuse trace IDs & trees
-|   |-- failure-adapter-reference.md         # Detailed failure adapter docs
-|   |-- composite-tool-adapter-reference.md  # Detailed composite adapter docs
-|   |-- how-tracing-works.md                 # Tracing mechanics
-|   |-- how-adapters-work.md                 # Adapter mechanics
-|   |-- scripts-reference.md                 # PowerShell scripts reference
-|   `-- troubleshooting.md                   # Troubleshooting guide
-|
-|-- examples/
-|   |-- failure_adapter_example.py           # Minimal failure adapter script
-|   `-- composite_tool_adapter_example.py    # Minimal composite adapter script
-|
-|-- litellm-proxy/                           # Local LiteLLM Proxy configs & test routes
-|-- scripts/                                 # PowerShell automation scripts
-`-- tests/                                   # Unit tests for tools and adapters
+src/crewai_langfuse_demo/
+|-- config.py                  # Loads non-secret defaults and required secrets.
+|-- llm.py                     # Routes CrewAI model calls through LiteLLM Proxy.
+|-- main.py                    # Configures tracing before importing CrewAI workflows.
+|-- tracing.py                 # OpenLIT, OTLP export, privacy, and HTTP context propagation.
+|-- adapters/
+|   |-- failure.py             # FailureAdapter: error-only safe summary.
+|   `-- composite_tool.py      # CompositeToolAdapter: selected child operations.
+|-- basic/                     # Automatic-only three-agent example.
+`-- advanced/                  # Retry, delegation, and composite examples.
 ```
 
----
+The smallest maintained adapter integrations are in `examples/`. Prefer linking to those files instead of duplicating their code in new documentation.
 
-## 4. Common Agent Workflows & Implementation Recipes
+## 4. Exact supported interfaces
 
-### Recipe 1: Initializing Tracing in a CrewAI Application
-Always call `init_tracing()` **before** importing any CrewAI classes:
+Configure tracing before importing modules that import CrewAI:
 
 ```python
-from crewai_langfuse_demo.tracing import init_tracing
+from crewai_langfuse_demo.config import load_settings
+from crewai_langfuse_demo.tracing import configure_tracing, flush_tracing
 
-# 1. Initialize tracing FIRST
-init_tracing(
-    service_name="customer-support-crewai",
-    environment="development",
-    tenant_id="konecta-customer-service",
-    conversation_id="conv-session-1234",
-    agent_id="order-support-crew",
-    channel="chat"
-)
+settings = load_settings()
+configure_tracing(settings)
 
-# 2. Import and build CrewAI objects AFTER tracing initialization
-from crewai import Agent, Crew, Process, Task
+from crewai_langfuse_demo.basic.crew import build_crew
+
+try:
+    result = build_crew(settings).kickoff()
+finally:
+    flush_tracing()
 ```
 
-### Recipe 2: Wrapping a Crew with the Failure Adapter
-Use the failure adapter only when observing crews that perform retries or fallbacks:
+For a retry/failure run, use `FailureAdapter.install()`, `FailureAdapter.complete(crew_completed=...)`, and `FailureAdapter.uninstall()` exactly as shown in `examples/failure_adapter_example.py`.
 
-```python
-from crewai_langfuse_demo.adapters.failure import observe_crew_failures
+For selected operations inside a composite tool, use `CompositeToolAdapter.run_child(parent_tool=..., child_operation=..., operation=...)` exactly as shown in `examples/composite_tool_adapter_example.py`.
 
-# Attach the adapter around kickoff
-with observe_crew_failures(crew, workflow_name="Order Support Retry Workflow"):
-    result = crew.kickoff(inputs={"order_id": "ORD-999"})
-```
+The repository does not provide `init_tracing`, `observe_crew_failures`, or `observe_child_operation` APIs.
 
-### Recipe 3: Instrumenting Internal Child Operations of a Composite Tool
-When a single parent tool performs multiple independent backend operations (e.g., querying CRM then validating inventory):
+## 5. Validation commands
 
-```python
-from crewai_langfuse_demo.adapters.composite_tool import observe_child_operation
-
-@tool("resolve_order_exception")
-def resolve_order_exception(order_id: str) -> str:
-    """Composite tool that executes multiple child operations."""
-    
-    # Child operation 1
-    with observe_child_operation(
-        parent_tool_name="resolve_order_exception",
-        child_operation_name="fetch_crm_history",
-        system="crm_service"
-    ):
-        history = crm_client.get(order_id)
-        
-    # Child operation 2
-    with observe_child_operation(
-        parent_tool_name="resolve_order_exception",
-        child_operation_name="verify_warehouse_stock",
-        system="inventory_service"
-    ):
-        stock = inventory_client.check(order_id)
-        
-    return "Resolution complete"
-```
-
----
-
-## 5. Validation and Testing Commands
-
-When verifying code changes locally, execute the following commands from the repository root:
+Run from the repository root:
 
 ```powershell
-# 1. Run local unit tests (No external network calls needed)
-pytest -v
-
-# OR using the PowerShell test wrapper:
+# Local unit and repository-contract tests; no external calls.
 .\scripts\run-tests.ps1
 
-# 2. Run scenarios against Langfuse & LiteLLM Proxy (requires configured .env)
+# Live scenarios; require approved .env values and services.
 .\scripts\run-basic.ps1
 .\scripts\run-retry.ps1
 .\scripts\run-delegation.ps1
 .\scripts\run-composite-tool.ps1
 
-# 3. Inspect a specific trace in Langfuse
+# Read-only trace summary. This does not perform a privacy or cost audit.
 .\scripts\check-trace.ps1 -TraceId <TRACE_ID>
 ```
 
----
+The test suite uses Python's standard `unittest` runner through `scripts/run-tests.ps1`; `pytest` is not a repository dependency.
 
-## 6. Prohibited Anti-Patterns Summary
+## 6. Prohibited patterns
 
-| Prohibited Action | Why It Is Forbidden | Correct Alternative |
+| Do not | Reason | Use instead |
 | :--- | :--- | :--- |
-| Adding manual `tracer.start_span("run_agent")` | Causes duplicate, conflicting spans in Langfuse. | Rely on OpenLIT automatic instrumentation. |
-| Hardcoding API keys or endpoints in code | Security vulnerability. | Load from environment variables via `src/crewai_langfuse_demo/config.py`. |
-| Logging customer prompts or tool payloads | Violates data privacy and compliance policies. | Capture low-cardinality metadata and references only. |
-| Importing CrewAI before `init_tracing()` | OpenLIT hooks will fail to wrap CrewAI classes properly. | Always invoke `init_tracing()` at the very top of the process entrypoint. |
-| Inventing custom `gen_ai.*` attributes | Violates the official OpenTelemetry GenAI Semantic Conventions. | Use the `kolibri.*` namespace for custom fields. |
+| Add manual normal-operation spans | Duplicates automatic CrewAI observations | OpenLIT automatic tracing |
+| Enable multiple CrewAI instrumentors | Creates duplicate or fragmented traces | OpenLIT only in this pattern |
+| Count HTTP transport spans as model calls | Double-counts usage and cost | Canonical LiteLLM generation spans |
+| Store credentials or customer content | Security and privacy risk | Environment/secret management and low-cardinality metadata |
+| Copy an unverified API or schema key from prose | Documentation can drift | Check source, tests, and the schema mapping |
+| Claim production readiness from POC evidence | Target services and enterprise environments differ | Run the acceptance checklist in development/staging |
+
+Non-secret reference endpoints may appear as configurable defaults. Keys and credentials must never be committed.

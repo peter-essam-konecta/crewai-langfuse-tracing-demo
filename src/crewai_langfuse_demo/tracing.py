@@ -15,7 +15,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from .config import Settings
 
 
-class SchemaV3SpanProcessor(SpanProcessor):
+class KolibriSpanProcessor(SpanProcessor):
     """Normalize and redact automatic spans before any exporter sees them."""
 
     def _on_ending(self, span) -> None:  # type: ignore[no-untyped-def]
@@ -64,11 +64,10 @@ def configure_tracing(settings: Settings) -> None:
             {
                 "service.name": settings.service_name,
                 "deployment.environment.name": "development",
-                "kolibri.schema.version": "3.0",
             }
         )
     )
-    provider.add_span_processor(SchemaV3SpanProcessor())
+    provider.add_span_processor(KolibriSpanProcessor())
     provider.add_span_processor(
         BatchSpanProcessor(
             OTLPSpanExporter(endpoint=f"{otlp_endpoint}/v1/traces", headers=headers)

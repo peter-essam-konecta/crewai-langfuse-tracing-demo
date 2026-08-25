@@ -50,8 +50,9 @@ with CrewAI.
 
 ### `run-tests.ps1`
 
-**Purpose:** Runs the safe local unit tests for the fictional tools and V3 cost
-mapper. It does not call Groq or send a trace to Langfuse.
+**Purpose:** Runs the safe local unit and repository-contract tests for tools,
+adapters, documentation consistency, and the retained V3-era cost mapper. It
+does not call a model provider or send a trace to Langfuse.
 
 **Needs:** `setup.ps1` must have completed.
 
@@ -129,7 +130,7 @@ Runs the simplest three-agent workflow with automatic tracing only.
 ### `run-retry.ps1`
 
 Runs a controlled retry scenario and enables the safe failure adapter. The
-trace should include one `demo.failure_summary` observation.
+trace should include one `kolibri.crewai.failure_summary` observation.
 
 ```powershell
 .\scripts\run-retry.ps1
@@ -147,7 +148,8 @@ automatic tracing and does not enable an adapter.
 ### `run-composite-tool.ps1`
 
 Runs a parent tool with two hidden child operations and enables the composite
-adapter. The trace should include two `demo.composite.child.*` observations.
+adapter. The trace should include child observations with
+`kolibri.composite.parent.tool.name` attributes.
 
 ```powershell
 .\scripts\run-composite-tool.ps1

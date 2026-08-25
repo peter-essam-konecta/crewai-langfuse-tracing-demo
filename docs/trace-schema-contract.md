@@ -1,92 +1,69 @@
-# Trace Schema Contract: OpenTelemetry Spine for GenAI Channels
+# CrewAI Implementation Mapping to the Final Trace Schema
 
-> **Status:** Approved cross-channel standard (Issue #63). Canonical reference for all Kolibri GenAI channels routing into Langfuse.
+> **Status:** Repository-owned CrewAI subset of the approved Issue #63 Final Trace Schema. This file maps the current code to that contract; it is not a replacement for the full organization-wide cross-channel specification.
 
-## 1. Overview and Core Principles
+## Governing rules
 
-This document defines the unified OpenTelemetry (OTel) trace schema for GenAI agent channels routing into Langfuse. It adheres strictly to the official [OpenTelemetry GenAI Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/) for all standardized concepts, and uses the `kolibri.*` prefix for platform-specific fields.
+1. Use official OpenTelemetry GenAI semantic attributes for standardized concepts.
+2. Never invent keys under `gen_ai.*`; use approved `kolibri.*` extensions for Kolibri-specific concepts.
+3. The real model vendor belongs in `gen_ai.provider.name`; LiteLLM is the Proxy, and CrewAI is recorded as `kolibri.runtime.name`.
+4. Count only canonical model generations for tokens and cost. HTTP transport observations are supporting telemetry, not additional model calls.
+5. Do not record raw messages, tool payloads, customer identifiers, exception messages, or stack traces.
 
-### Three Global Invariants
-1. **No custom keys inside `gen_ai.*`:** Never invent non-standard keys in the reserved `gen_ai.*` namespace. All enterprise extensions belong in `kolibri.*`.
-2. **Provider Name Accuracy:** `gen_ai.provider.name` is always the real model vendor (e.g., `openai`, `gcp.gemini`, `groq`). LiteLLM is the transport proxy, not the provider. The execution engine is captured in `kolibri.runtime.name`.
-3. **No Double-Counting:** LiteLLM Proxy HTTP transport records (e.g., `POST /chat/completions`) and canonical generation spans in the same trace belong to the same request. Dashboards and cost checks count only the generation span.
+## Application-owned context attributes
 
----
+`configure_tracing()` supplies these attributes through OpenLIT's `custom_span_attributes`:
 
-## 2. Root-Span / Workflow Attributes (The Agent Run)
+| Attribute | Source | Example |
+| :--- | :--- | :--- |
+| `kolibri.tenant.id` | `Settings.tenant_id` | `demo-workspace` |
+| `gen_ai.conversation.id` | `Settings.conversation_id` | `demo-session-001` |
+| `gen_ai.agent.id` | `Settings.agent_id` | `crew_customer_support_01` |
+| `kolibri.runtime.name` | Fixed by this implementation | `crewai` |
+| `kolibri.channel` | `Settings.channel` | `chat` |
 
-Every agent or crew execution creates exactly one canonical workflow run span.
+`langfuse.trace.name` and `gen_ai.workflow.name` are added only when `LANGFUSE_TRACE_NAME` or `CREWAI_TRACE_NAME` is set and the automatic span is a workflow span.
 
-| Attribute | Type | Description | Example |
-| :--- | :--- | :--- | :--- |
-| `gen_ai.operation.name` | `string` | The execution type (`invoke_agent` for single agent, `invoke_workflow` for crew). | `"invoke_workflow"` |
-| `gen_ai.agent.id` | `string` | Unique identifier of the crew or agent definition. | `"customer-support-crew"` |
-| `kolibri.tenant.id` | `string` | Internal workspace / tenant identifier. | `"konecta-customer-service"` |
-| `kolibri.channel` | `string` | Interaction modality (`"chat"`, `"voice"`, `"messaging"`). | `"chat"` |
-| `kolibri.runtime.name` | `string` | Execution framework (`"crewai"`, `"elevenlabs"`, `"google_adk"`). | `"crewai"` |
-| `gen_ai.conversation.id` | `string` | Pseudonymous session key linking turns across conversations. | `"conv-session-9988"` |
-| `gen_ai.usage.cost` | `double` | Calculated total financial cost in USD (Langfuse convention). | `0.002396` |
+## Automatically owned observations
 
----
+OpenLIT is expected to create CrewAI workflow, agent, task, and normal tool observations. Exporter-provided names and optional fields can vary by library version, so validate them in a fresh target-environment trace instead of hardcoding an assumed tree.
 
-## 3. Child-Span Types (CrewAI Operations)
+For tool operations, the repository uses the standard values:
 
-All child spans define their execution type using standard `gen_ai.operation.name`.
+- `gen_ai.operation.name = "execute_tool"`
+- `gen_ai.tool.name = <tool name>`
 
-### A. Agent Step (Sub-Agent Execution)
-- **`gen_ai.operation.name`**: `"invoke_agent"`
-- **Span Name**: `invoke_agent {agent.name}`
-- **Required Attributes**:
-  - `gen_ai.agent.name`: Descriptive name of the specialist agent (e.g., `"Order Verification Specialist"`).
+LiteLLM Proxy owns canonical generation fields, including the real provider and model identifiers, input/output token usage, finish reasons, and cost. The repository normalizes `litellm.cost.total` to `gen_ai.usage.cost` when the former is present on a span. The exact Proxy-emitted field set must be verified against the deployed Proxy version.
 
-### B. LLM Generation (Model Call)
-- **Span Kind**: `CLIENT`
-- **`gen_ai.operation.name`**: `"chat"` (or `"generate_content"`)
-- **Required Attributes** (Emitted canonically by LiteLLM Proxy):
-  - `gen_ai.provider.name`: Actual vendor (`"openai"`, `"gcp.gemini"`, `"groq"`).
-  - `gen_ai.request.model`: Requested model alias or identifier.
-  - `gen_ai.response.model`: Model returned in the API response.
-  - `gen_ai.usage.input_tokens`: Prompt token count.
-  - `gen_ai.usage.output_tokens`: Completion token count.
-  - `gen_ai.usage.cost`: Total cost of the generation in USD.
-  - `gen_ai.response.finish_reasons`: Array of finish reasons (e.g., `["stop"]`).
+## Failure adapter extension
 
-### C. Tool Execution
-- **Span Kind**: `INTERNAL`
-- **`gen_ai.operation.name`**: `"execute_tool"`
-- **Span Name**: `execute_tool {tool.name}`
-- **Required Attributes**:
-  - `gen_ai.tool.name`: Name of the executed tool (e.g., `"lookup_order_status"`).
-  - `kolibri.system`: Target backend system (e.g., `"crm_database"`).
+`FailureAdapter` emits one span named `kolibri.crewai.failure_summary` for each recorded failed tool. Its exact attributes are:
 
----
+| Attribute | Meaning | Allowed examples |
+| :--- | :--- | :--- |
+| `kolibri.failure.tool.name` | Failed tool identifier | `lookup_retryable_order_status` |
+| `error.type` | Standard low-cardinality error category | `timeout`, `tool_execution_failed` |
+| `kolibri.failure.error.type` | Kolibri copy of the safe error category | `controlled_test_failure` |
+| `kolibri.failure.retry.count` | Retry attempts inferred from CrewAI events | `2` |
+| `kolibri.failure.final.outcome` | Safe final state | `retry_succeeded`, `fallback_completed`, `aborted` |
 
-## 4. Reusable Failure & Composite Extension Attributes
+The span receives OTel `ERROR` status with the constant description `safe tool failure`. It never copies the raw exception text.
 
-When standard automatic tracing has visibility gaps during advanced scenarios, the approved safe adapters emit standard `kolibri.*` extension attributes:
+## Composite-tool extension
 
-### A. Failure Summary (`kolibri.crewai.failure_summary`)
-Emitted by `src/crewai_langfuse_demo/adapters/failure.py` when tool retries or failures occur:
-- `kolibri.failed_tool.name`: Name of the failing tool (e.g., `"lookup_order_status"`).
-- `kolibri.error.type`: Low-cardinality error classifier (e.g., `"controlled_test_failure"`, `"timeout"`).
-- `kolibri.retry.count`: Number of retry attempts made before failure/recovery.
-- `kolibri.recovery.outcome`: Final status (`"fallback_completed"`, `"recovered"`, `"unhandled_exception"`).
+`CompositeToolAdapter.run_child()` emits one child span for each selected hidden operation:
 
-### B. Composite Child Operations (`execute_tool {child_op}`)
-Emitted by `src/crewai_langfuse_demo/adapters/composite_tool.py` for operations nested inside a parent tool:
-- `gen_ai.operation.name`: `"execute_tool"`
-- `gen_ai.tool.name`: Child operation name (e.g., `"fetch_crm_history"`).
-- `kolibri.composite.parent_tool`: Name of enclosing tool (`"resolve_order_exception"`).
-- `kolibri.composite.is_child_operation`: `true`.
-- `kolibri.system`: Backend service being called (`"crm_service"`).
+| Attribute | Value |
+| :--- | :--- |
+| Span name | `execute_tool <child operation>` |
+| `gen_ai.operation.name` | `execute_tool` |
+| `gen_ai.tool.name` | Child operation name |
+| `kolibri.composite.parent.tool.name` | Parent tool name |
+| `kolibri.composite.child.operation.name` | Child operation name |
+| `kolibri.composite.child.final.outcome` | `succeeded` or `failed` |
 
----
+There is no `kolibri.system` field in the current adapter because the implementation does not receive a system identifier.
 
-## 5. Privacy, PII, and Payload By Reference
+## Privacy controls and validation boundary
 
-To comply with data protection regulations and ensure zero-PII in telemetry:
-1. **Raw Content Prohibited:** Customer names, emails, phone numbers, raw prompt texts, completions, tool input arguments, tool output JSONs, and raw exception stack traces must **NEVER** be stored in span attributes.
-2. **Payload References (When Content Store is Active):**
-   - `kolibri.content.ref`: URI of the sanitized payload in the governed content store (e.g., `gs://kolibri-telem/session_9988/tool-io.json`).
-   - `kolibri.content.sha256`: SHA-256 integrity hash of the referenced payload.
-3. **OpenLIT Setting:** `capture_message_content=False` is strictly enforced.
+The implementation sets `capture_message_content=False` and `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=no_content`. These are required controls, not proof of complete redaction across every dependency or exporter version. Production approval requires inspection of a fresh trace and an allow-list/redaction review in the target environment.
