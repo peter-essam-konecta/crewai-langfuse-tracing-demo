@@ -50,8 +50,13 @@ Fill `.env` with approved Langfuse and Konecta LiteLLM Proxy values through the 
 Inspect a recorded trace without copying its payload into the repository:
 
 ```powershell
-.\scripts\check-trace.ps1 -TraceId <TRACE_ID>
+.\scripts\check-trace.ps1 `
+  -TraceId <RETRY_TRACE_ID> `
+  -ExpectedTool lookup_retryable_order_status `
+  -RequireFailureSummary
 ```
+
+The checker runs eleven schema-derived structural checks, uses Final Trace Schema tool attributes before its explicit legacy fallback, and returns a failing exit code when required structure is missing. It does not claim privacy or cost proof, and it validates SpanKind only when the Langfuse API exposes it.
 
 ## Source of truth
 

@@ -28,10 +28,12 @@
 
 OpenLIT is expected to create CrewAI workflow, agent, task, and normal tool observations. Exporter-provided names and optional fields can vary by library version, so validate them in a fresh target-environment trace instead of hardcoding an assumed tree.
 
-For tool operations, the repository uses the standard values:
+The approved contract requires tool operations to use:
 
 - `gen_ai.operation.name = "execute_tool"`
 - `gen_ai.tool.name = <tool name>`
+
+`scripts/check-trace.ps1` detects those fields first. It can recognize the current CrewAI legacy `Tool Usage` + `tool_name` representation as an explicit compatibility fallback, but that fallback does not pass the separate Final Trace Schema tool-field check. This distinction prevents a legacy exporter-name mismatch from hiding a real contract gap.
 
 LiteLLM Proxy owns canonical generation fields, including the real provider and model identifiers, input/output token usage, finish reasons, and cost. The repository normalizes `litellm.cost.total` to `gen_ai.usage.cost` when the former is present on a span. The exact Proxy-emitted field set must be verified against the deployed Proxy version.
 
@@ -64,6 +66,19 @@ The span receives OTel `ERROR` status with the constant description `safe tool f
 
 There is no `kolibri.system` field in the current adapter because the implementation does not receive a system identifier.
 
+## OpenTelemetry SpanKind
+
+The approved contract requires:
+
+The current [OpenTelemetry Trace API](https://opentelemetry.io/docs/specs/otel/trace/api/#spankind) and [GenAI span conventions](https://github.com/open-telemetry/semantic-conventions-genai/blob/main/docs/gen-ai/gen-ai-spans.md) are secondary technical references. The approved Final Trace Schema remains authoritative for this project.
+
+| Operation | Required SpanKind | Current evidence |
+| :--- | :--- | :--- |
+| Canonical model generation | `CLIENT` | Not yet proven end to end. The Langfuse public API used by this repository does not expose SpanKind, and the fresh 25 August Retry trace did not contain a connected Proxy generation. |
+| Tool execution | `INTERNAL` | Proven locally for the repository-owned `CompositeToolAdapter` span and for OpenLIT `1.44.0`'s CrewAI tool wrapper through SDK-exported spans. The fresh Langfuse API response does not expose the actual normal-tool SpanKind. |
+
+`CompositeToolAdapter` sets `SpanKind.INTERNAL` when it creates its selected child-operation span. The repository does not alter SpanKind on automatic OpenLIT spans or remote LiteLLM Proxy generations.
+
 ## Privacy controls and validation boundary
 
-The implementation sets `capture_message_content=False` and `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=no_content`. These are required controls, not proof of complete redaction across every dependency or exporter version. Production approval requires inspection of a fresh trace and an allow-list/redaction review in the target environment.
+The implementation sets `capture_message_content=False` and `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=no_content`. These are required controls, not proof of complete redaction across every dependency or exporter version. Production approval requires inspection of a fresh trace and an allow-list/redaction review in the target environment. The checker validates only fields exposed by the Langfuse public API; it does not claim privacy, Proxy cost parity, complete hierarchy, or unavailable SpanKind evidence.

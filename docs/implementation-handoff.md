@@ -35,3 +35,15 @@ It does not provide production credentials, target-service code, enterprise depl
 7. Record fresh trace IDs and cost/privacy evidence before requesting approval or closing issue #65.
 
 If a required fact is not established by code, tests, or recorded evidence, mark it pending and ask the relevant owner instead of assuming it.
+
+## Remaining development-owned validation after the R&D cleanup
+
+Marwan / the Development Team still owns:
+
+1. Resolving or accepting the target service's actual CrewAI/OpenLIT dependency behavior so normal tools export the Final Trace Schema fields rather than relying on the checker compatibility fallback.
+2. Confirming that internal OpenLIT graph observations are mapped to valid operation types and carry every required attribute in the target dependency set.
+3. Restoring and proving one connected trace with LiteLLM Proxy-owned canonical generations, tokens, latency, and cost in development/staging.
+4. Capturing exporter- or collector-level evidence that canonical generations are `CLIENT` and normal tool executions are `INTERNAL`.
+5. Completing target-environment privacy inspection, Proxy cost comparison, hierarchy review, deployment, and production-readiness evidence.
+
+Peter / Incubation R&D retains ownership of this reference implementation, the corrected validation approach, evidence, acceptance criteria, and handoff support. These target-service actions do not move implementation ownership back to Peter.

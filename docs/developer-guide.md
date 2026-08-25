@@ -110,6 +110,21 @@ Use `CompositeToolAdapter.run_child(...)` for selected internal operations hidde
 - [ ] Failed operations use low-cardinality `error.type` and OTel `ERROR` status.
 - [ ] When enabled, the failure summary contains the exact `kolibri.failure.*` fields documented in the schema mapping.
 - [ ] When enabled, composite child spans contain the exact `kolibri.composite.*` fields documented in the schema mapping.
+- [ ] Exporter- or collector-level evidence confirms canonical LLM generations are `SpanKind.CLIENT` and normal tool executions are `SpanKind.INTERNAL`.
 - [ ] `.\scripts\run-tests.ps1` passes and a live healthy/failure run passes in the target environment.
 
-`scripts/check-trace.ps1` prints a structural summary only. It does not independently prove privacy or cost parity; those require trace inspection and comparison with the approved Proxy record.
+Use scenario expectations so a missing required tool or adapter result cannot be treated as success:
+
+```powershell
+.\scripts\check-trace.ps1 `
+  -TraceId <RETRY_TRACE_ID> `
+  -ExpectedTool lookup_retryable_order_status `
+  -RequireFailureSummary
+
+.\scripts\check-trace.ps1 `
+  -TraceId <COMPOSITE_TRACE_ID> `
+  -ExpectedTool resolve_order_exception,lookup_order_status_for_exception,lookup_policy_for_exception `
+  -ExpectedCompositeChild lookup_order_status_for_exception,lookup_policy_for_exception
+```
+
+The checker evaluates eleven repository-specific structural checks derived from the approved Final Trace Schema. It uses semantic tool fields first and reports legacy fallback separately. A non-passing result exits with code `1`. It reports SpanKind only if the API exposes it; privacy, Proxy cost parity, and the intended full hierarchy still require separate evidence.

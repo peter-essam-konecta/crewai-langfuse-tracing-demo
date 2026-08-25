@@ -55,6 +55,12 @@ Confirm `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` belong to the same proje
 3. Ask the Proxy owner to confirm inbound W3C trace-context extraction is enabled.
 4. Run a fresh scenario and verify the hierarchy again.
 
+If the checker reports zero canonical generations, do not count HTTP `POST` observations or workflow observations as model calls. Ask the Proxy owner to confirm that Proxy-owned generation telemetry is enabled and joined through the inbound W3C context.
+
+## Tools appear only as a legacy fallback
+
+The checker may report `Tool Usage` + `tool_name` under `LegacyToolFallback`. This proves that the tool identity was found, but it does not satisfy the Final Trace Schema tool-field check. Compare the target service's CrewAI/OpenLIT versions and execution path; do not rename the check, suppress the failure, or change the approved schema to make the result pass.
+
 ## Tests fail
 
 ```powershell
