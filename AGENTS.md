@@ -62,9 +62,9 @@ Run from the repository root:
 .\scripts\run-delegation.ps1
 .\scripts\run-composite-tool.ps1
 
-.\scripts\check-trace.ps1 -TraceId <TRACE_ID>
+.\scripts\check-trace.ps1 -TraceId <TRACE_ID> -ExpectedTool <TOOL_NAME>
 ```
 
-The first two commands are local. Scenario and trace commands require approved `.env` values and external services. `check-trace.ps1` is a structural summary, not a privacy or cost audit.
+The first two commands are local. Scenario and trace commands require approved `.env` values and external services. `check-trace.ps1` is an eleven-check structural validator, not a privacy, cost, or complete hierarchy audit. It reports SpanKind as `not_exposed` instead of passing it when the Langfuse API omits that field.
 
 Historical local-Groq and V3-era cost-reproduction files are intentionally absent from `main`. They are preserved in Git tag `archive-v3-local-proxy-2026-08-25` and must not be restored into the current integration path without an explicit decision.

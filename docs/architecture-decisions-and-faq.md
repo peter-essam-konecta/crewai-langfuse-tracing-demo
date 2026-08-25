@@ -44,9 +44,14 @@ No. In this repository, `openlit==1.44.0` is a direct dependency and it brings t
 
 They are reusable, privacy-conscious, unit-tested R&D references. Production use requires a code review, dependency compatibility check, target-environment traces, privacy validation, and technical approval.
 
+### Did the corrected checker produce a fresh 11/11?
+
+No. The 25 August Retry workflow completed, but its schema-strict result was 7/11. Compatibility-aware detection found the legacy normal tool, while the separate Final-Schema check correctly failed it. The same trace also exposed incomplete automatic agent operations and no connected Proxy-owned canonical generation. This is a current dependency/environment gap, not a reason to weaken the checker or change the approved schema.
+
 ### What remains open?
 
 - Development/staging implementation in the target CrewAI service
+- Target dependency behavior that emits Final-Schema normal-tool and agent-step fields without relying on compatibility fallbacks
 - Enterprise secret and Proxy configuration
-- Fresh healthy, failure, cost, hierarchy, and privacy evidence
+- Fresh connected-generation, healthy, failure, cost, hierarchy, privacy, and exporter-level SpanKind evidence
 - Production approval and GitHub issue closure by the responsible owners

@@ -123,6 +123,20 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("-m unittest discover", runner)
         self.assertNotIn("pytest", requirements.lower())
 
+    def test_trace_checker_delegates_to_schema_first_validator(self) -> None:
+        checker = (REPOSITORY_ROOT / "scripts" / "check-trace.ps1").read_text(
+            encoding="utf-8"
+        )
+        validator = (
+            REPOSITORY_ROOT / "src" / "crewai_langfuse_demo" / "trace_validation.py"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("crewai_langfuse_demo.trace_validation", checker)
+        self.assertNotIn("$_.name -eq 'Tool Usage'", checker)
+        self.assertIn('operation == "execute_tool"', validator)
+        self.assertIn('attributes.get("gen_ai.tool.name")', validator)
+        self.assertIn('name in {"Tool Usage", "Tool Usage Error"}', validator)
+
 
 if __name__ == "__main__":
     unittest.main()

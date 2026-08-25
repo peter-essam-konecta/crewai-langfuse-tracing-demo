@@ -6,7 +6,7 @@ from collections.abc import Callable
 from typing import TypeVar
 
 from opentelemetry import trace
-from opentelemetry.trace import Status, StatusCode
+from opentelemetry.trace import SpanKind, Status, StatusCode
 
 Result = TypeVar("Result")
 
@@ -25,7 +25,9 @@ class CompositeToolAdapter:
         operation: Callable[[], Result],
     ) -> Result:
         tracer = self._tracer or trace.get_tracer("crewai-langfuse-demo.composite-adapter")
-        with tracer.start_as_current_span(f"execute_tool {child_operation}") as span:
+        with tracer.start_as_current_span(
+            f"execute_tool {child_operation}", kind=SpanKind.INTERNAL
+        ) as span:
             span.set_attribute("gen_ai.operation.name", "execute_tool")
             span.set_attribute("gen_ai.tool.name", child_operation)
             span.set_attribute("kolibri.composite.parent.tool.name", parent_tool)
@@ -38,4 +40,3 @@ class CompositeToolAdapter:
                 raise
             span.set_attribute("kolibri.composite.child.final.outcome", "succeeded")
             return result
-
