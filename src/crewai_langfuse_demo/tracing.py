@@ -84,9 +84,11 @@ def configure_tracing(settings: Settings) -> None:
         # these client instrumentors avoids duplicate model observations.
         disabled_instrumentors=["litellm", "openai"],
         custom_span_attributes={
-            "demo.tenant.id": settings.tenant_id,
-            "demo.conversation.id": settings.conversation_id,
-            "demo.runtime": "crewai",
+            "kolibri.tenant.id": settings.tenant_id,
+            "gen_ai.conversation.id": settings.conversation_id,
+            "gen_ai.agent.id": settings.agent_id,
+            "kolibri.runtime.name": "crewai",
+            "kolibri.channel": settings.channel,
         },
     )
 

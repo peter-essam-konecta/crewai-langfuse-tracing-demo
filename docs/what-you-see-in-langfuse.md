@@ -5,9 +5,9 @@ After each example completes, open the newest trace in Langfuse.
 | Example | What should be visible | Extra adapter observation |
 | --- | --- | --- |
 | Basic | Workflow, three agents, three tasks, three tools, model generations | None |
-| Retry | Workflow, retry-aware agent, retryable tool, model generations | `demo.failure_summary` |
+| Retry | Workflow, retry-aware agent, retryable tool, model generations | `kolibri.crewai.failure_summary` |
 | Delegation | Coordinator, policy specialist, delegation work, policy tool, model generations | None |
-| Composite tool | Parent tool, model generations | `demo.composite.child.*` for the two internal child operations |
+| Composite tool | Parent tool, model generations | `execute_tool <child_op>` with `kolibri.composite.*` attributes |
 
 Two records can look similar:
 

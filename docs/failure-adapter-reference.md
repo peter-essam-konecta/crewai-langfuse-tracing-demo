@@ -28,12 +28,12 @@ The complete minimal code is in [failure_adapter_example.py](../examples/failure
 
 ## What it adds to Langfuse
 
-Only when a tool fails, it creates one `demo.failure_summary` observation with:
+Only when a tool fails, it creates one `kolibri.crewai.failure_summary` observation with:
 
-- failed tool name;
-- safe error type;
-- retry count; and
-- final outcome: `retry_succeeded`, `fallback_completed`, or `aborted`.
+- failed tool name (`kolibri.failure.tool.name`);
+- safe error type (`error.type` and `kolibri.failure.error.type`);
+- retry count (`kolibri.failure.retry.count`); and
+- final outcome (`kolibri.failure.final.outcome`): `retry_succeeded`, `fallback_completed`, or `aborted`.
 
 It does **not** export tool arguments, prompts, responses, raw exception text, or stack traces.
 

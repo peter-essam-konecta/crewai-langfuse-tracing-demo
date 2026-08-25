@@ -19,6 +19,8 @@ class Settings:
     service_name: str
     tenant_id: str
     conversation_id: str
+    agent_id: str
+    channel: str
 
 
 def load_settings() -> Settings:
@@ -46,5 +48,8 @@ def load_settings() -> Settings:
         service_name=os.getenv("OTEL_SERVICE_NAME", "crewai-langfuse-tracing-demo"),
         tenant_id=os.getenv("DEMO_TENANT_ID", "demo-workspace"),
         conversation_id=os.getenv("DEMO_CONVERSATION_ID", "demo-session-001"),
+        agent_id=os.getenv("DEMO_AGENT_ID", "crew_customer_support_01"),
+        channel=os.getenv("DEMO_CHANNEL", "chat"),
     )
+
 

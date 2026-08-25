@@ -59,12 +59,13 @@ class FailureAdapter:
         for record in self._records.values():
             retry_count = max(record.retry_count, self._start_counts[record.tool_name] - 1)
             parent = self._parent_context(record.parent_context)
-            with tracer.start_as_current_span("demo.failure_summary", context=parent) as span:
-                span.set_attribute("demo.failure.tool.name", record.tool_name)
-                span.set_attribute("demo.failure.error.type", record.error_type)
-                span.set_attribute("demo.failure.retry.count", retry_count)
+            with tracer.start_as_current_span("kolibri.crewai.failure_summary", context=parent) as span:
+                span.set_attribute("kolibri.failure.tool.name", record.tool_name)
+                span.set_attribute("error.type", record.error_type)
+                span.set_attribute("kolibri.failure.error.type", record.error_type)
+                span.set_attribute("kolibri.failure.retry.count", retry_count)
                 span.set_attribute(
-                    "demo.failure.final.outcome",
+                    "kolibri.failure.final.outcome",
                     self._outcome(record.tool_name, crew_completed),
                 )
                 span.set_status(Status(StatusCode.ERROR, "safe tool failure"))

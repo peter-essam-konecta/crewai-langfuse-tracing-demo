@@ -28,11 +28,13 @@ The complete minimal code is in [composite_tool_adapter_example.py](../examples/
 
 ## What it adds to Langfuse
 
-For each wrapped child operation, it creates one `demo.composite.child.*` observation with:
+For each wrapped child operation, it creates one `execute_tool <child_operation>` observation with:
 
-- parent tool name;
-- child-operation name; and
-- final outcome: `succeeded` or `failed`.
+- `gen_ai.operation.name = "execute_tool"`;
+- `gen_ai.tool.name = <child_operation>`;
+- `kolibri.composite.parent.tool.name = <parent_tool>`;
+- `kolibri.composite.child.operation.name = <child_operation>`; and
+- `kolibri.composite.child.final.outcome = "succeeded" | "failed"`.
 
 ## When to use it
 

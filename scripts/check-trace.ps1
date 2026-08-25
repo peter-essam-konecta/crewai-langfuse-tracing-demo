@@ -31,7 +31,7 @@ $observations = (Invoke-RestMethod -Headers $headers -Uri "$baseUrl/api/public/o
     Agents = @($observations | Where-Object { $_.name -like 'invoke_agent *' } | Select-Object -ExpandProperty name -Unique)
     Tools = @($observations | Where-Object { $_.name -eq 'Tool Usage' } | ForEach-Object { $_.metadata.attributes.tool_name } | Where-Object { $_ } | Select-Object -Unique)
     ModelGenerations = @($observations | Where-Object { $_.type -eq 'GENERATION' }).Count
-    SafeFailureSummaries = @($observations | Where-Object { $_.name -eq 'demo.failure_summary' }).Count
-    CompositeChildOperations = @($observations | Where-Object { $_.name -like 'demo.composite.child.*' }).Count
+    SafeFailureSummaries = @($observations | Where-Object { $_.name -in 'kolibri.crewai.failure_summary', 'demo.failure_summary' }).Count
+    CompositeChildOperations = @($observations | Where-Object { $_.metadata.attributes.'kolibri.composite.parent.tool.name' -or $_.name -like 'demo.composite.child.*' }).Count
 } | Format-List
 
