@@ -13,21 +13,24 @@ Get-Content $envPath | ForEach-Object {
     [Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim().Trim('"').Trim("'"), "Process")
 }
 
-if ([string]::IsNullOrWhiteSpace($env:LITELLM_MASTER_KEY)) {
-    throw "Missing LITELLM_MASTER_KEY in .env."
+$masterKey = $env:LITELLM_MASTER_KEY.Trim()
+if ($masterKey.StartsWith("Bearer ")) {
+    $masterKey = $masterKey.Substring(7).Trim()
 }
 
+$modelName = if ($env:LITELLM_MODEL) { $env:LITELLM_MODEL -replace '^openai/', '' } else { "gemini-2.5-flash-nothink" }
+
 $headers = @{
-    Authorization = "Bearer $env:LITELLM_MASTER_KEY"
+    Authorization = "Bearer $masterKey"
     "Content-Type" = "application/json"
 }
 $body = @{
-    model = "demo-groq"
-    messages = @(@{ role = "user"; content = "Reply only: local LiteLLM Proxy is connected." })
+    model = $modelName
+    messages = @(@{ role = "user"; content = "Reply only: LiteLLM Proxy is connected." })
 } | ConvertTo-Json -Depth 4
 $url = "$($env:LITELLM_PROXY_HOST.TrimEnd('/'))/v1/chat/completions"
 
-Write-Host "Sending a safe smoke test to $url"
+Write-Host "Sending a safe smoke test to $url (model: $modelName)"
 $response = Invoke-RestMethod -Method Post -Uri $url -Headers $headers -Body $body
 Write-Host "LiteLLM Proxy response:"
 Write-Host $response.choices[0].message.content

@@ -16,6 +16,7 @@ class Settings:
     langfuse_secret_key: str
     litellm_proxy_host: str
     litellm_master_key: str
+    litellm_model: str
     service_name: str
     tenant_id: str
     conversation_id: str
@@ -39,12 +40,17 @@ def load_settings() -> Settings:
             raise RuntimeError(f"{name} is missing from .env.")
         return value
 
+    master_key = required("LITELLM_MASTER_KEY").strip()
+    if master_key.startswith("Bearer "):
+        master_key = master_key[7:].strip()
+
     return Settings(
         langfuse_base_url=os.getenv("LANGFUSE_BASE_URL", "http://localhost:3000").rstrip("/"),
         langfuse_public_key=required("LANGFUSE_PUBLIC_KEY"),
         langfuse_secret_key=required("LANGFUSE_SECRET_KEY"),
         litellm_proxy_host=os.getenv("LITELLM_PROXY_HOST", "http://localhost:4000").rstrip("/"),
-        litellm_master_key=required("LITELLM_MASTER_KEY"),
+        litellm_master_key=master_key,
+        litellm_model=os.getenv("LITELLM_MODEL", "openai/gemini-2.5-flash-nothink"),
         service_name=os.getenv("OTEL_SERVICE_NAME", "crewai-langfuse-tracing-demo"),
         tenant_id=os.getenv("DEMO_TENANT_ID", "demo-workspace"),
         conversation_id=os.getenv("DEMO_CONVERSATION_ID", "demo-session-001"),

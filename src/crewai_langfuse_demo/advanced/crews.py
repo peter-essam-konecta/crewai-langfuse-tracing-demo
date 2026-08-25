@@ -24,7 +24,14 @@ def build_retry_crew(settings: Settings) -> Crew:
         expected_output="A one-sentence safe status after retry succeeds.",
         agent=agent,
     )
-    return Crew(agents=[agent], tasks=[task], process=Process.sequential, tracing=False, verbose=False)
+    return Crew(
+        name="Customer Support - Retry & Recovery",
+        agents=[agent],
+        tasks=[task],
+        process=Process.sequential,
+        tracing=False,
+        verbose=False,
+    )
 
 
 def build_delegation_crew(settings: Settings) -> Crew:
@@ -52,6 +59,7 @@ def build_delegation_crew(settings: Settings) -> Crew:
         agent=coordinator,
     )
     return Crew(
+        name="Customer Support - Agent Delegation",
         agents=[coordinator, specialist],
         tasks=[task],
         process=Process.sequential,
@@ -76,5 +84,12 @@ def build_composite_tool_crew(settings: Settings) -> Crew:
         expected_output="A one-sentence safe combined result.",
         agent=agent,
     )
-    return Crew(agents=[agent], tasks=[task], process=Process.sequential, tracing=False, verbose=False)
+    return Crew(
+        name="Customer Support - Composite Operations",
+        agents=[agent],
+        tasks=[task],
+        process=Process.sequential,
+        tracing=False,
+        verbose=False,
+    )
 

@@ -22,7 +22,7 @@ def create_llm(settings: Settings) -> ProxyCompatibleLLM:
     """Create the one LLM route used by all examples."""
 
     return ProxyCompatibleLLM(
-        model="openai/demo-groq",
+        model=settings.litellm_model,
         base_url=f"{settings.litellm_proxy_host}/v1",
         api_key=settings.litellm_master_key,
         temperature=0,

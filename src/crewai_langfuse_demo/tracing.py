@@ -23,6 +23,12 @@ class SchemaV3SpanProcessor(SpanProcessor):
         if not isinstance(attributes, MutableMapping):
             return
 
+        custom_name = os.getenv("LANGFUSE_TRACE_NAME") or os.getenv("CREWAI_TRACE_NAME")
+        if custom_name and getattr(span, "name", "").startswith("invoke_workflow"):
+            span._name = custom_name
+            attributes["langfuse.trace.name"] = custom_name
+            attributes["gen_ai.workflow.name"] = custom_name
+
         cost = attributes.get("litellm.cost.total")
         if cost is not None:
             try:

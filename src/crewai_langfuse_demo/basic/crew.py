@@ -55,6 +55,7 @@ def build_crew(settings: Settings) -> Crew:
         context=[order_task, policy_task],
     )
     return Crew(
+        name="Customer Support - Delayed Order",
         agents=[order_agent, policy_agent, response_agent],
         tasks=[order_task, policy_task, response_task],
         process=Process.sequential,
